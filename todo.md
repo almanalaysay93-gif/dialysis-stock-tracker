@@ -39,3 +39,8 @@
 - [x] Add confirmation dialog before item delete (and quarantine-related actions)
 - [x] Add FEFO ordering vitest (earliest-expiring batch deducted first across multiple lots)
 - [x] Checkpoint + deliver
+
+## Bug fixes (production report)
+- [x] Fix production dashboard errors: sessions page fired one sessions.get query per session (16 in one batch), overwhelming the DB under burst load; rows existed but queries failed intermittently
+- [x] Harden session data fetching: new sessions.listWithLines endpoint fetches sessions + lines in 2 queries; Reports page uses batched getSessionConsumablesByIds (N+1 eliminated)
+- [x] Verify on live DB, run tests, checkpoint

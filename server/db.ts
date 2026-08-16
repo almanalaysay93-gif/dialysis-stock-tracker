@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -255,6 +255,35 @@ export async function listSessions() {
   return db.select().from(treatmentSessions).orderBy(desc(treatmentSessions.createdAt));
 }
 
+// Fetch sessions with their consumable lines in a single round-trip pair,
+// avoiding one DB query per session on list views.
+export async function listSessionsWithLines(): Promise<
+  Array<
+    Awaited<ReturnType<typeof listSessions>>[number] & {
+      lines: Awaited<ReturnType<typeof getSessionConsumables>>;
+    }
+  >
+> {
+  const db = await getDb();
+  if (!db) return [];
+  const sessions = await db
+    .select()
+    .from(treatmentSessions)
+    .orderBy(desc(treatmentSessions.createdAt));
+  if (sessions.length === 0) return [];
+  const lines = await db
+    .select()
+    .from(sessionConsumables)
+    .where(inArray(sessionConsumables.sessionId, sessions.map((s) => s.id)));
+  const bySession = new Map<number, typeof lines>();
+  for (const line of lines) {
+    const list = bySession.get(line.sessionId) ?? [];
+    list.push(line);
+    bySession.set(line.sessionId, list);
+  }
+  return sessions.map((s) => ({ ...s, lines: bySession.get(s.id) ?? [] }));
+}
+
 export async function getSessionById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -287,6 +316,13 @@ export async function getSessionConsumables(sessionId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(sessionConsumables).where(eq(sessionConsumables.sessionId, sessionId));
+}
+
+// Batched variant: fetch lines for many sessions in one query.
+export async function getSessionConsumablesByIds(sessionIds: number[]) {
+  const db = await getDb();
+  if (!db || sessionIds.length === 0) return [];
+  return db.select().from(sessionConsumables).where(inArray(sessionConsumables.sessionId, sessionIds));
 }
 
 export async function createSessionConsumables(

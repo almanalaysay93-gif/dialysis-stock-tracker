@@ -14,7 +14,7 @@ export default function Sessions() {
   const utils = trpc.useUtils();
   const [filter, setFilter] = useState<"all" | "HD" | "PD">("all");
 
-  const { data: sessions, isLoading } = trpc.sessions.list.useQuery(undefined, {
+  const { data: sessions, isLoading } = trpc.sessions.listWithLines.useQuery(undefined, {
     enabled: isAuthenticated,
   });
   const { data: items } = trpc.items.list.useQuery();
@@ -91,11 +91,11 @@ function SessionCard({
     status: string;
     createdBy: string | null;
     createdAt: Date;
+    lines: { id: number; itemId: number; batchId: number | null; quantity: number; sessionId: number }[];
   };
   itemMap: Map<number, { name: string; category: string; unitOfMeasure: string }>;
 }) {
-  const { data } = trpc.sessions.get.useQuery({ id: session.id }, { enabled: true });
-  const lines = data?.lines ?? [];
+  const lines = session.lines ?? [];
   return (
     <div className="py-3.5">
       <div className="flex items-center justify-between gap-3">

@@ -223,6 +223,7 @@ export const appRouter = router({
 
   sessions: router({
     list: publicProcedure.query(() => db.listSessions()),
+    listWithLines: publicProcedure.query(() => db.listSessionsWithLines()),
     get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
       const session = await db.getSessionById(input.id);
       if (!session) return undefined;
@@ -285,12 +286,21 @@ export const appRouter = router({
         );
         const allItems = await db.listItems();
         const itemMap = new Map(allItems.map((i) => [i.id, i]));
+        // Fetch all lines for the matched sessions in a single query
+        // (avoids one DB round-trip per session).
+        type LineRow = Awaited<ReturnType<typeof db.getSessionConsumablesByIds>>[number];
+        const linesBySession = new Map<number, LineRow[]>();
+        for (const l of sessions.length > 0 ? await db.getSessionConsumablesByIds(sessions.map((s) => s.id)) : []) {
+          const list = linesBySession.get(l.sessionId) ?? [];
+          list.push(l);
+          linesBySession.set(l.sessionId, list);
+        }
         const perItem = new Map<number, { item: (typeof allItems)[0]; qty: number; sessions: number }>();
         const perCategory = new Map<string, { category: string; qty: number; sessions: number }>();
         const perShift = new Map<string, number>();
         const perDay = new Map<string, number>();
         for (const s of sessions) {
-          const lines = await db.getSessionConsumables(s.id);
+          const lines = linesBySession.get(s.id) ?? [];
           for (const l of lines) {
             const item = itemMap.get(l.itemId);
             const cur = perItem.get(l.itemId) ?? { item: item!, qty: 0, sessions: 0 };
