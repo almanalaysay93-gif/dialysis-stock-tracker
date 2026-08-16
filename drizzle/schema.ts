@@ -142,3 +142,36 @@ export const sessionConsumables = mysqlTable("session_consumables", {
 
 export type SessionConsumable = typeof sessionConsumables.$inferSelect;
 export type InsertSessionConsumable = typeof sessionConsumables.$inferInsert;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Purchase orders & delivery tracking
+// ─────────────────────────────────────────────────────────────────────────────
+export const purchaseOrders = mysqlTable("purchase_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Friendly reference, e.g. "PO-2026-004" */
+  poNumber: varchar("poNumber", { length: 40 }).notNull(),
+  supplier: varchar("supplier", { length: 160 }).notNull(),
+  status: mysqlEnum("status", ["ordered", "partially-delivered", "delivered", "cancelled"]).default("ordered").notNull(),
+  expectedDeliveryDate: date("expectedDeliveryDate", { mode: "string" }).notNull(),
+  actualDeliveryDate: date("actualDeliveryDate", { mode: "string" }),
+  itemsSummary: text("itemsSummary"),
+  notes: text("notes"),
+  createdBy: varchar("createdBy", { length: 120 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = typeof purchaseOrders.$inferInsert;
+
+// Purchase order line items (which items/quantities are expected)
+export const purchaseOrderLines = mysqlTable("purchase_order_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  poId: int("poId").notNull(),
+  itemId: int("itemId").notNull(),
+  quantityOrdered: int("quantityOrdered").notNull(),
+  quantityReceived: int("quantityReceived").default(0).notNull(),
+});
+
+export type PurchaseOrderLine = typeof purchaseOrderLines.$inferSelect;
+export type InsertPurchaseOrderLine = typeof purchaseOrderLines.$inferInsert;

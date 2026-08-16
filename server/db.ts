@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -336,4 +336,168 @@ export async function createSessionConsumables(
     lines.map((l) => ({ sessionId, itemId: l.itemId, batchId: l.batchId ?? null, quantity: l.quantity }))
   );
   return db.select().from(sessionConsumables).where(eq(sessionConsumables.sessionId, sessionId));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Purchase orders & delivery metrics
+// ─────────────────────────────────────────────────────────────────────────────
+import {
+  purchaseOrderLines,
+  purchaseOrders,
+} from "../drizzle/schema";
+
+export async function listPurchaseOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  const orders = await db.select().from(purchaseOrders).orderBy(purchaseOrders.expectedDeliveryDate);
+  const lines = await db.select().from(purchaseOrderLines);
+  return orders.map((po) => ({ ...po, lines: lines.filter((l) => l.poId === po.id) }));
+}
+
+export async function getPurchaseOrderById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [po] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id)).limit(1);
+  if (!po) return undefined;
+  const lines = await db.select().from(purchaseOrderLines).where(eq(purchaseOrderLines.poId, id));
+  return { ...po, lines };
+}
+
+export async function createPurchaseOrder(
+  data: typeof purchaseOrders.$inferInsert,
+  lines: { itemId: number; quantityOrdered: number }[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [insertResult] = await db.insert(purchaseOrders).values(data);
+  const poId = insertResult.insertId;
+  if (lines.length > 0) {
+    await db.insert(purchaseOrderLines).values(lines.map((l) => ({ poId, ...l, quantityReceived: 0 })));
+  }
+  return getPurchaseOrderById(poId);
+}
+
+export async function updatePurchaseOrder(
+  id: number,
+  data: Partial<typeof purchaseOrders.$inferInsert>,
+  lines?: { itemId: number; quantityOrdered: number; quantityReceived?: number }[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  if (Object.keys(data).length > 0) {
+    await db.update(purchaseOrders).set(data).where(eq(purchaseOrders.id, id));
+  }
+  if (lines) {
+    await db.delete(purchaseOrderLines).where(eq(purchaseOrderLines.poId, id));
+    if (lines.length > 0) {
+      await db.insert(purchaseOrderLines).values(lines.map((l) => ({ poId: id, ...l })));
+    }
+  }
+  return getPurchaseOrderById(id);
+}
+
+export async function deletePurchaseOrder(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(purchaseOrderLines).where(eq(purchaseOrderLines.poId, id));
+  await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+  return { success: true } as const;
+}
+
+/** Auto-generate next PO number like PO-2026-0004 */
+export async function nextPoNumber() {
+  const db = await getDb();
+  if (!db) return `PO-${new Date().getFullYear()}-0001`;
+  const year = new Date().getFullYear();
+  const prefix = `PO-${year}-`;
+  const rows = await db
+    .select({ poNumber: purchaseOrders.poNumber })
+    .from(purchaseOrders)
+    .where(sql`purchase_orders.poNumber LIKE ${`${prefix}%`}`);
+  const nums = rows
+    .map((r) => Number(r.poNumber.slice(prefix.length)))
+    .filter((n) => !Number.isNaN(n));
+  const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+  return `${prefix}${String(next).padStart(4, "0")}`;
+}
+
+/**
+ * Delivery metrics per item:
+ * - daysOfSupply: onHand / avg daily consumption (last 14 days), Infinity when no consumption
+ * - lastDeliveryDate: most recent stock-in
+ * - nextDeliveryDate: earliest expected delivery of open POs containing this item
+ * - incomingQty: quantity ordered but not yet received on open POs
+ */
+export async function getDeliveryMetrics() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  const cutoffIso = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
+  const todayIso = now.toISOString().slice(0, 10);
+
+  const [allItems, stockTotals, txRows, poRows, poLineRows] = await Promise.all([
+    db.select().from(items).where(eq(items.isActive, true)),
+    db.select().from(batches),
+    db.select().from(stockTransactions).where(and(eq(stockTransactions.type, "stock-out"), gt(stockTransactions.performedAt, new Date(cutoffIso + "T00:00:00")))),
+    db.select().from(purchaseOrders).where(inArray(purchaseOrders.status, ["ordered", "partially-delivered"])),
+    db.select().from(purchaseOrderLines),
+  ]);
+
+  const itemIdSet = new Set(allItems.map((i) => i.id));
+
+  // On-hand per item
+  const onHand = new Map<number, number>();
+  stockTotals.forEach((b) => onHand.set(b.itemId, (onHand.get(b.itemId) ?? 0) + (b.isQuarantined ? 0 : b.quantityOnHand)));
+
+  // Avg daily consumption (stock-out ledger over 14 days)
+  const consumedQty = new Map<number, number>();
+  txRows.forEach((t) => {
+    if (!itemIdSet.has(t.itemId)) return;
+    consumedQty.set(t.itemId, (consumedQty.get(t.itemId) ?? 0) + Math.abs(t.quantity));
+  });
+
+  // Last delivery per item (most recent stock-in)
+  const insRows = await db.select().from(stockTransactions).where(eq(stockTransactions.type, "stock-in"));
+  const stockInByItem = new Map<number, string>();
+  insRows.forEach((t) => {
+    const iso = new Date(t.performedAt).toISOString().slice(0, 10);
+    if (!stockInByItem.has(t.itemId) || iso > (stockInByItem.get(t.itemId) ?? "")) {
+      stockInByItem.set(t.itemId, iso);
+    }
+  });
+
+  // Next delivery per item from open POs
+  const nextDelivery = new Map<number, string>();
+  const incomingQty = new Map<number, number>();
+  const openPoIds = new Set(poRows.map((p) => p.id));
+  poLineRows
+    .filter((l) => openPoIds.has(l.poId))
+    .forEach((l) => {
+      const po = poRows.find((p) => p.id === l.poId)!;
+      if (po.expectedDeliveryDate < todayIso) return; // already past — don't count as "next"
+      const cur = nextDelivery.get(l.itemId);
+      if (!cur || po.expectedDeliveryDate < cur) nextDelivery.set(l.itemId, po.expectedDeliveryDate);
+      incomingQty.set(l.itemId, (incomingQty.get(l.itemId) ?? 0) + (l.quantityOrdered - l.quantityReceived));
+    });
+
+  return allItems.map((item) => {
+    const hand = onHand.get(item.id) ?? 0;
+    const consumed = consumedQty.get(item.id) ?? 0;
+    const avgDaily = consumed / 14;
+    const daysOfSupply = avgDaily > 0 ? Math.round((hand / avgDaily) * 10) / 10 : Infinity;
+    return {
+      itemId: item.id,
+      name: item.name,
+      category: item.category,
+      unitOfMeasure: item.unitOfMeasure,
+      onHand: hand,
+      minStockLevel: item.minStockLevel,
+      reorderLevel: item.reorderLevel,
+      avgDailyConsumption: Math.round(avgDaily * 100) / 100,
+      daysOfSupply,
+      lastDeliveryDate: stockInByItem.get(item.id) ?? null,
+      nextDeliveryDate: nextDelivery.get(item.id) ?? null,
+      incomingQty: incomingQty.get(item.id) ?? 0,
+    };
+  });
 }

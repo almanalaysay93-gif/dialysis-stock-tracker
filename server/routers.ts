@@ -325,9 +325,124 @@ export const appRouter = router({
           perDay: Array.from(perDay.entries())
             .map(([date, qty]) => ({ date, qty }))
             .sort((a, b) => a.date.localeCompare(b.date)),
-        };
+                };
+      }),
+  }),
+  purchaseOrders: router({
+    list: protectedProcedure.query(() => db.listPurchaseOrders()),
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => db.getPurchaseOrderById(input.id)),
+    create: protectedProcedure
+      .input(
+        z.object({
+          supplier: z.string().min(1),
+          expectedDeliveryDate: z.string().min(8),
+          itemsSummary: z.string().optional(),
+          notes: z.string().optional(),
+          lines: z.array(z.object({ itemId: z.number(), quantityOrdered: z.number().min(1) })).default([]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const poNumber = await db.nextPoNumber();
+        return db.createPurchaseOrder(
+          {
+            poNumber,
+            supplier: input.supplier,
+            status: "ordered",
+            expectedDeliveryDate: input.expectedDeliveryDate,
+            itemsSummary: input.itemsSummary ?? null,
+            notes: input.notes ?? null,
+            createdBy: ctx.user.name ?? undefined,
+          },
+          input.lines
+        );
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["ordered", "partially-delivered", "delivered", "cancelled"]).optional(),
+          expectedDeliveryDate: z.string().min(8).optional(),
+          actualDeliveryDate: z.string().min(8).nullable().optional(),
+          notes: z.string().optional(),
+          lines: z.array(z.object({ itemId: z.number(), quantityOrdered: z.number().min(1), quantityReceived: z.number().min(0).optional() })).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updatePurchaseOrder(id, data, input.lines);
+      }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => db.deletePurchaseOrder(input.id)),
+  }),
+
+  /** Per-item stock-level metrics: days of supply, last/next delivery, incoming qty */
+  stockMetrics: router({
+    list: protectedProcedure.query(() => db.getDeliveryMetrics()),
+  }),
+
+  /** Calendar events for the delivery calendar: deliveries, expiry, low stock */
+  calendar: router({
+    list: protectedProcedure
+      .input(z.object({ month: z.number().min(0).max(11), year: z.number().min(2024).max(2100) }))
+      .query(async ({ input }) => {
+        const [poRows, batchRows, stockTotalRows] = await Promise.all([
+          db.listPurchaseOrders(),
+          db.listBatches(),
+          db.getStockTotals(),
+        ]);
+        const itemById = new Map(stockTotalRows.map((i) => [i.id, i]));
+        const first = new Date(input.year, input.month, 1).toISOString().slice(0, 10);
+        const last = new Date(input.year, input.month + 1, 0).toISOString().slice(0, 10);
+        const inMonth = (iso: string) => iso >= first && iso <= last;
+        const todayIso = new Date().toISOString().slice(0, 10);
+
+        const events: { date: string; type: "delivery" | "expiry" | "lowstock"; title: string; subtitle: string; severity: "info" | "warning" | "danger" }[] = [];
+
+        // Expected deliveries (POs with expected date in month)
+        poRows.forEach((po) => {
+          if (inMonth(po.expectedDeliveryDate)) {
+            events.push({
+              date: po.expectedDeliveryDate,
+              type: "delivery",
+              title: `${po.poNumber} · ${po.supplier}`,
+              subtitle: po.status === "delivered" ? "Delivered" : po.status === "partially-delivered" ? "Partially delivered" : "Expected delivery",
+              severity: po.status === "delivered" ? "warning" : "info",
+            });
+          }
+        });
+
+        // Expiry events: batches expiring within the month
+        batchRows.forEach((b) => {
+          if (inMonth(b.expiryDate) && b.quantityOnHand > 0 && !b.isQuarantined) {
+            const item = itemById.get(b.itemId);
+            events.push({
+              date: b.expiryDate,
+              type: "expiry",
+              title: `${item?.name ?? `Item #${b.itemId}`} · LOT ${b.lotNumber}`,
+              subtitle: `${b.quantityOnHand} ${item?.unitOfMeasure ?? "units"} expiring`,
+              severity: b.expiryDate < todayIso ? "danger" : "warning",
+            });
+          }
+        });
+
+        // Low stock: items at or below reorder level, marked for today
+        if (inMonth(todayIso)) {
+          stockTotalRows
+            .filter((i) => i.onHand <= i.reorderLevel)
+            .forEach((i) => {
+              events.push({
+                date: todayIso,
+                type: "lowstock",
+                title: `${i.name} — low stock`,
+                subtitle: `${i.onHand} ${i.unitOfMeasure} on hand (reorder ${i.reorderLevel})`,
+                severity: i.onHand <= i.minStockLevel ? "danger" : "warning",
+              });
+            });
+        }
+
+        return events.sort((a, b) => a.date.localeCompare(b.date));
       }),
   }),
 });
 
 export type AppRouter = typeof appRouter;
+

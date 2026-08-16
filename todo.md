@@ -52,3 +52,14 @@
 - [x] Larger icons (h-5→h-6/7) and larger text scale (base 15-16px, bigger headings) across all pages
 - [x] Add gradient background to app; verify on all pages (dashboard, items, transactions, consumption, sessions, reports)
 - [x] Type-check, tests pass, visual verification, checkpoint
+
+## Delivery calendar & stock metrics (user request)
+- [x] Purchase orders table (supplier, items, expected delivery date, status: ordered/delivered/cancelled, notes)
+- [x] Migration applied + db helpers (create/list/update POs)
+- [x] Stock metrics: days-of-supply per item (onHand / avg daily consumption over last 14 days), next delivery date, last delivery date
+- [x] Calendar view page: month grid showing deliveries (POs), low-stock days, expiry events; prev/next month navigation
+- [x] Purchase Orders page: create dialog, pending deliveries banner, receive-all flow that marks delivered + auto stock-in with auto lot numbers + updates line quantityReceived
+- [x] Calendar page widgets: deliveries/expiries/low-stock counts + stock coverage table with at-risk flags (will run out before next delivery)
+- [x] Server procedures: purchaseOrders router (list, create, update, delete), stockMetrics, calendar events
+- [x] Tests for PO creation/delivery, days-of-supply calculation
+- [x] Type-check, screenshots, checkpoint

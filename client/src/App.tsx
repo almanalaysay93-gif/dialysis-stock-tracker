@@ -5,6 +5,8 @@ import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import CalendarPage from "./pages/Calendar";
+import PurchaseOrders from "./pages/PurchaseOrders";
 import Consumption from "./pages/Consumption";
 import Dashboard from "./pages/Dashboard";
 import Items from "./pages/Items";
@@ -20,6 +22,8 @@ function Router() {
         <Route path={"/items"} component={Items} />
         <Route path={"/transactions"} component={Transactions} />
         <Route path={"/consumption"} component={Consumption} />
+        <Route path={"/calendar"} component={CalendarPage} />
+        <Route path={"/purchase-orders"} component={PurchaseOrders} />
         <Route path={"/sessions"} component={Sessions} />
         <Route path={"/reports"} component={Reports} />
         <Route path={"/404"} component={NotFound} />

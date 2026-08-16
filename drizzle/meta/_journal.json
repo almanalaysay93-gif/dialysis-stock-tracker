@@ -15,6 +15,13 @@
       "when": 1786868180596,
       "tag": "0001_first_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786873248086,
+      "tag": "0002_redundant_dazzler",
+      "breakpoints": true
     }
   ]
 }

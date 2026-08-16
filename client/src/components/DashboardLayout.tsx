@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft } from "lucide-react";
+import { Activity, CalendarDays, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft, ShoppingBag } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +33,8 @@ export const menuItems = [
   { icon: PanelsTopLeft, label: "Stock In / Out", path: "/transactions" },
   { icon: Activity, label: "Consumption", path: "/consumption" },
   { icon: HeartPulse, label: "Sessions", path: "/sessions" },
+  { icon: CalendarDays, label: "Calendar", path: "/calendar" },
+  { icon: ShoppingBag, label: "Purchase Orders", path: "/purchase-orders" },
   { icon: FileText, label: "Reports", path: "/reports" },
 ];
 
