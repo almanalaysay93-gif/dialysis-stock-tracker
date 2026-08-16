@@ -100,7 +100,7 @@ export default function Reports() {
   return (
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight">Consumption Reports</h1>
+        <h1 className="text-3xl font-display font-semibold tracking-tight">Consumption Reports</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Daily and weekly summaries to support reorder forecasting
         </p>

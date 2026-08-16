@@ -169,7 +169,7 @@ export default function Transactions() {
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-display font-semibold tracking-tight">
+          <h1 className="text-3xl font-display font-semibold tracking-tight">
             Stock In / Stock Out
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -179,10 +179,10 @@ export default function Transactions() {
         {isAuthenticated ? (
           <div className="flex gap-2">
             <Button onClick={() => setInOpen(true)} className="gap-2">
-              <ArrowDownToLine className="h-4 w-4" /> Stock in
+              <ArrowDownToLine className="h-5 w-5" /> Stock in
             </Button>
             <Button variant="outline" onClick={() => setOutOpen(true)} className="gap-2">
-              <ArrowUpFromLine className="h-4 w-4" /> Stock out
+              <ArrowUpFromLine className="h-5 w-5" /> Stock out
             </Button>
           </div>
         ) : null}
@@ -226,9 +226,9 @@ export default function Transactions() {
                         }`}
                       >
                         {tx.type === "stock-in" ? (
-                          <ArrowDownToLine className="h-4 w-4" />
+                          <ArrowDownToLine className="h-5 w-5" />
                         ) : (
-                          <ArrowUpFromLine className="h-4 w-4" />
+                          <ArrowUpFromLine className="h-5 w-5" />
                         )}
                       </div>
                       <div className="min-w-0">

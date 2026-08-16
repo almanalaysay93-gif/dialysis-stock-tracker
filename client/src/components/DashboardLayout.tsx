@@ -158,27 +158,35 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r-0"
+          className="border-r-0 glass-dark text-white"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
+          <SidebarHeader className="h-20 justify-center py-3">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                className="h-9 w-9 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                <PanelLeft className="h-5 w-5 text-white/70" />
               </button>
               {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <HeartPulse className="h-5 w-5 text-primary shrink-0" />
-                  <span className="font-semibold tracking-tight truncate">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <img
+                    src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                    alt="SPMC Kidney and Transplant Institute"
+                    className="h-11 w-11 rounded-full object-cover border-2 border-white/25 shadow-md shrink-0"
+                  />
+                  <span className="font-semibold tracking-tight truncate text-[15px] leading-tight">
                     Dialysis Stock Tracker
                   </span>
                 </div>
               ) : (
-                <HeartPulse className="h-5 w-5 text-primary shrink-0" />
+                <img
+                  src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                  alt="SPMC SKTI"
+                  className="h-11 w-11 rounded-full object-cover border-2 border-white/25 shadow-md shrink-0"
+                />
               )}
             </div>
           </SidebarHeader>
@@ -193,10 +201,10 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-12 transition-all font-normal text-[15px]`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-6 w-6 ${isActive ? "text-[oklch(0.78_0.1_150)]" : "text-white/60"}`}
                       />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -249,20 +257,21 @@ function DashboardLayoutContent({
 
       <SidebarInset>
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
-              </div>
+          <div className="flex border-b h-16 items-center justify-between glass-strong sticky top-0 z-40 px-3">
+            <div className="flex items-center gap-2.5">
+              <SidebarTrigger className="h-11 w-11 rounded-lg glass" />
+              <img
+                src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                alt="SPMC SKTI"
+                className="h-10 w-10 rounded-full object-cover border-2 border-primary/20 shrink-0"
+              />
+              <span className="tracking-tight text-foreground text-lg font-semibold">
+                {activeMenuItem?.label ?? "Menu"}
+              </span>
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-5">{children}</main>
       </SidebarInset>
     </>
   );

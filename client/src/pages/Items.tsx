@@ -136,14 +136,14 @@ export default function Items() {
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-display font-semibold tracking-tight">Item Catalog</h1>
+          <h1 className="text-3xl font-display font-semibold tracking-tight">Item Catalog</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage consumable items, categories, and reorder thresholds
           </p>
         </div>
         {isAuthenticated ? (
           <Button onClick={openCreate} className="gap-2">
-            <PackagePlus className="h-4 w-4" /> Add item
+            <PackagePlus className="h-5 w-5" /> Add item
           </Button>
         ) : null}
       </div>
@@ -354,18 +354,18 @@ function ItemRow({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="h-4 w-4 mr-2" /> Edit
+              <Pencil className="h-5 w-5 mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={onDelete}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="h-4 w-4 mr-2" /> Delete
+              <Trash2 className="h-5 w-5 mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

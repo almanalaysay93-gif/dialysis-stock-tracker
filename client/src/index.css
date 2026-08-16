@@ -2,9 +2,9 @@
 @import "tw-animate-css";
 
 /*
-  Dialysis Stock Tracker — design system
-  A refined, clinical-premium aesthetic: deep teal anchors, cool neutrals,
-  generous whitespace, soft shadows, crisp typographic hierarchy.
+  Dialysis Stock Tracker — SPMC Kidney & Transplant Institute design system
+  Palette drawn from the institute logo: deep navy blue, kidney crimson,
+  arterial teal, and leaf green — wrapped in a glassmorphism aesthetic.
 */
 
 @custom-variant dark (&:is(.dark *));
@@ -13,44 +13,51 @@
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
 
-  /* Palette: clinical teal on warm ivory */
-  --color-background: oklch(0.985 0.004 120);
-  --color-foreground: oklch(0.22 0.02 220);
-  --color-card: oklch(0.995 0.002 120);
-  --color-card-foreground: oklch(0.22 0.02 220);
-  --color-popover: oklch(0.995 0.002 120);
-  --color-popover-foreground: oklch(0.22 0.02 220);
+  /* SPMC SKTI palette: navy-ink background, glass surfaces */
+  --color-background: oklch(0.955 0.015 240);          /* misty blue-gray */
+  --color-foreground: oklch(0.24 0.05 265);            /* deep navy */
 
-  --color-primary: oklch(0.42 0.09 200);        /* deep clinical teal */
-  --color-primary-foreground: oklch(0.985 0.01 200);
-  --color-secondary: oklch(0.94 0.02 200);
-  --color-secondary-foreground: oklch(0.35 0.05 200);
-  --color-muted: oklch(0.955 0.008 180);
-  --color-muted-foreground: oklch(0.5 0.02 220);
-  --color-accent: oklch(0.93 0.03 200);
-  --color-accent-foreground: oklch(0.3 0.06 200);
+  --color-card: oklch(0.99 0.005 240 / 0.72);          /* glass surface */
+  --color-card-foreground: oklch(0.24 0.05 265);
+  --color-popover: oklch(0.99 0.005 240 / 0.85);
+  --color-popover-foreground: oklch(0.24 0.05 265);
 
-  --color-destructive: oklch(0.55 0.2 25);
+  --color-primary: oklch(0.38 0.13 268);               /* SPMC navy */
+  --color-primary-foreground: oklch(0.985 0.008 268);
+  --color-secondary: oklch(0.92 0.03 250);
+  --color-secondary-foreground: oklch(0.34 0.09 268);
+  --color-muted: oklch(0.94 0.02 245 / 0.65);
+  --color-muted-foreground: oklch(0.48 0.04 260);
+  --color-accent: oklch(0.88 0.05 250 / 0.7);
+  --color-accent-foreground: oklch(0.3 0.09 268);
+
+  --color-destructive: oklch(0.5 0.19 25);             /* kidney crimson */
   --color-destructive-foreground: oklch(0.985 0.01 25);
 
-  --color-border: oklch(0.905 0.01 200);
-  --color-input: oklch(0.905 0.01 200);
-  --color-ring: oklch(0.42 0.09 200);
+  --color-border: oklch(0.38 0.13 268 / 0.16);
+  --color-input: oklch(0.38 0.13 268 / 0.2);
+  --color-ring: oklch(0.38 0.13 268);
 
-  /* Semantic status colors */
-  --color-ok: oklch(0.55 0.12 155);
-  --color-warning: oklch(0.72 0.15 85);
-  --color-danger: oklch(0.55 0.2 25);
-  --color-info: oklch(0.6 0.09 240);
+  /* Semantic status colors from logo */
+  --color-ok: oklch(0.55 0.13 150);                   /* leaf green */
+  --color-warning: oklch(0.72 0.15 80);
+  --color-danger: oklch(0.52 0.19 22);                 /* crimson */
+  --color-info: oklch(0.62 0.09 220);                  /* arterial teal */
 
-  --radius-sm: 0.375rem;
-  --radius: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.125rem;
+  /* Logo accent colors (for charts, badges) */
+  --color-navy: oklch(0.38 0.13 268);
+  --color-crimson: oklch(0.52 0.19 22);
+  --color-teal: oklch(0.6 0.08 195);
+  --color-leaf: oklch(0.55 0.13 150);
 
-  --shadow-sm: 0 1px 2px oklch(0.22 0.02 220 / 0.05);
-  --shadow: 0 2px 8px oklch(0.22 0.02 220 / 0.07);
-  --shadow-md: 0 6px 20px oklch(0.22 0.02 220 / 0.08);
+  --radius-sm: 0.5rem;
+  --radius: 0.875rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-sm: 0 2px 6px oklch(0.3 0.08 260 / 0.08);
+  --shadow: 0 6px 18px oklch(0.3 0.08 260 / 0.1);
+  --shadow-md: 0 10px 32px oklch(0.3 0.08 260 / 0.13);
 }
 
 @layer base {
@@ -65,18 +72,30 @@
 
   body {
     font-family: var(--font-sans);
-    background: var(--color-background);
     color: var(--color-foreground);
+    font-size: 16px; /* larger base text */
+    line-height: 1.6;
+    /* Layered gradient backdrop echoing the logo's wave gradient */
+    background:
+      radial-gradient(1200px 600px at 85% -10%, oklch(0.62 0.08 195 / 0.3), transparent 60%),
+      radial-gradient(1000px 500px at -10% 110%, oklch(0.55 0.13 150 / 0.22), transparent 55%),
+      radial-gradient(900px 500px at 110% 120%, oklch(0.52 0.19 22 / 0.1), transparent 55%),
+      linear-gradient(160deg, oklch(0.965 0.02 250), oklch(0.93 0.04 250) 55%, oklch(0.95 0.03 190));
+    background-attachment: fixed;
   }
 
   ::selection {
-    background: oklch(0.42 0.09 200 / 0.18);
+    background: oklch(0.38 0.13 268 / 0.2);
   }
 
   input:focus,
   select:focus,
   textarea:focus {
     outline: none;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
   }
 }
 
@@ -102,6 +121,35 @@
   }
   .bg-danger {
     background-color: var(--color-danger);
+  }
+
+  /* ── Glassmorphism system ─────────────────────────────────── */
+  .glass {
+    background: oklch(0.995 0.004 240 / 0.55);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid oklch(0.99 0.006 240 / 0.6);
+    box-shadow:
+      0 8px 28px oklch(0.3 0.08 260 / 0.1),
+      inset 0 1px 0 oklch(1 0 240 / 0.65);
+  }
+
+  .glass-strong {
+    background: oklch(0.995 0.004 240 / 0.75);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid oklch(0.99 0.006 240 / 0.7);
+    box-shadow:
+      0 12px 36px oklch(0.3 0.08 260 / 0.13),
+      inset 0 1px 0 oklch(1 0 240 / 0.75);
+  }
+
+  .glass-dark {
+    background: oklch(0.28 0.07 265 / 0.78);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid oklch(0.99 0.006 240 / 0.18);
+    box-shadow: 0 12px 36px oklch(0.2 0.05 260 / 0.35);
   }
 
   .animate-in-fade {

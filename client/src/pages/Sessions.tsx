@@ -29,7 +29,7 @@ export default function Sessions() {
   return (
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight">Treatment Sessions</h1>
+        <h1 className="text-3xl font-display font-semibold tracking-tight">Treatment Sessions</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Completed dialysis sessions with recorded consumable usage
         </p>
@@ -56,7 +56,7 @@ export default function Sessions() {
             </div>
           ) : !filtered.length ? (
             <div className="py-12 text-center">
-              <HeartPulse className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+              <HeartPulse className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
               <p className="text-sm font-medium">
                 No {filter === "all" ? "" : filter + " "}sessions recorded yet
               </p>
@@ -100,12 +100,12 @@ function SessionCard({
     <div className="py-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 rounded-lg bg-primary/8 flex items-center justify-center shrink-0">
-            <UserRound className="h-5 w-5 text-primary" />
+          <div className="h-12 w-12 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
+            <UserRound className="h-6 w-6 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{session.patientName}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <p className="text-[15px] font-medium truncate">{session.patientName}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span>Chair {session.chair}</span>
               <span>·</span>
               <Badge

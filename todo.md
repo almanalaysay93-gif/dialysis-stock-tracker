@@ -44,3 +44,11 @@
 - [x] Fix production dashboard errors: sessions page fired one sessions.get query per session (16 in one batch), overwhelming the DB under burst load; rows existed but queries failed intermittently
 - [x] Harden session data fetching: new sessions.listWithLines endpoint fetches sessions + lines in 2 queries; Reports page uses batched getSessionConsumablesByIds (N+1 eliminated)
 - [x] Verify on live DB, run tests, checkpoint
+
+## Rebrand — SPMC Kidney & Transplant Institute identity
+- [x] Upload SPMC_SKTI logo as static asset and reference in app (sidebar header, mobile header)
+- [x] Update color scheme in index.css from logo palette (navy #2A3B8F, crimson #B01E2D, teal #2E9E9D, green gradient)
+- [x] Add glassmorphism design system (glass cards, frosted sidebar/backdrop blur, translucent surfaces)
+- [x] Larger icons (h-5→h-6/7) and larger text scale (base 15-16px, bigger headings) across all pages
+- [x] Add gradient background to app; verify on all pages (dashboard, items, transactions, consumption, sessions, reports)
+- [x] Type-check, tests pass, visual verification, checkpoint

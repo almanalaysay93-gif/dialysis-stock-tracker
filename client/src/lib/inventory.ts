@@ -1,14 +1,14 @@
 import type { StockTotal } from "./types";
 
 export const CATEGORY_META: Record<string, { label: string; accent: string }> = {
-  dialyzer: { label: "Dialyzer", accent: "oklch(0.42 0.09 200)" },
-  bloodline: { label: "Bloodline", accent: "oklch(0.55 0.12 155)" },
-  needles: { label: "Needles", accent: "oklch(0.6 0.09 240)" },
-  saline: { label: "Saline", accent: "oklch(0.72 0.06 190)" },
-  medications: { label: "Medications", accent: "oklch(0.5 0.15 320)" },
-  disinfectants: { label: "Disinfectants", accent: "oklch(0.65 0.14 140)" },
-  PPE: { label: "PPE", accent: "oklch(0.7 0.1 80)" },
-  "PD supplies": { label: "PD Supplies", accent: "oklch(0.55 0.1 30)" },
+  dialyzer: { label: "Dialyzer", accent: "oklch(0.52 0.19 22)" },
+  bloodline: { label: "Bloodline", accent: "oklch(0.6 0.08 195)" },
+  needles: { label: "Needles", accent: "oklch(0.38 0.13 268)" },
+  saline: { label: "Saline", accent: "oklch(0.55 0.13 150)" },
+  medications: { label: "Medications", accent: "oklch(0.62 0.09 220)" },
+  disinfectants: { label: "Disinfectants", accent: "oklch(0.48 0.1 180)" },
+  PPE: { label: "PPE", accent: "oklch(0.72 0.15 80)" },
+  "PD supplies": { label: "PD Supplies", accent: "oklch(0.6 0.1 150)" },
 };
 
 export const REASON_META: Record<string, { label: string; color: string }> = {

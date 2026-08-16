@@ -124,7 +124,7 @@ export default function Consumption() {
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-display font-semibold tracking-tight">
+          <h1 className="text-3xl font-display font-semibold tracking-tight">
             Daily Consumption
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -133,7 +133,7 @@ export default function Consumption() {
         </div>
         {isAuthenticated ? (
           <Button onClick={openDialog} className="gap-2">
-            <Activity className="h-4 w-4" /> Log session
+            <Activity className="h-5 w-5" /> Log session
           </Button>
         ) : null}
       </div>
@@ -354,7 +354,7 @@ function SessionRow({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-            <UserRound className="h-4 w-4 text-secondary-foreground" />
+            <UserRound className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">

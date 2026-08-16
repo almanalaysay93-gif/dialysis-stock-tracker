@@ -48,12 +48,12 @@ function StatCard({
       <CardContent className="pt-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-muted-foreground font-medium">{label}</p>
-            <p className="text-3xl font-display font-semibold tracking-tight mt-1">{value}</p>
-            {sub ? <p className="text-xs text-muted-foreground mt-1">{sub}</p> : null}
+            <p className="text-[15px] text-muted-foreground font-medium">{label}</p>
+            <p className="text-4xl font-display font-semibold tracking-tight mt-1">{value}</p>
+            {sub ? <p className="text-sm text-muted-foreground mt-1">{sub}</p> : null}
           </div>
-          <div className={`rounded-xl p-2.5 ${toneCls}`}>
-            <Icon className="h-5 w-5" />
+          <div className={`rounded-2xl p-3 ${toneCls}`}>
+            <Icon className="h-7 w-7" />
           </div>
         </div>
       </CardContent>
@@ -64,8 +64,8 @@ function StatCard({
 function ExpiryPill({ qty, days, color }: { qty: number; days: string; color: string }) {
   if (qty <= 0) return null;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium ${color}`}>
-      <Snowflake className="h-3 w-3" />
+    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${color}`}>
+      <Snowflake className="h-4 w-4" />
       {qty} {days}
     </span>
   );
@@ -82,12 +82,12 @@ export default function Dashboard() {
     <div className="space-y-6 animate-in-fade max-w-[1400px] mx-auto">
       <div className="flex items-end justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-display font-semibold tracking-tight">Stock Overview</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-3xl font-display font-semibold tracking-tight">Stock Overview</h1>
+          <p className="text-[15px] text-muted-foreground mt-1">
             Real-time visibility across all consumable stock
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Expiry thresholds: 30 / 60 / 90 days · FEFO rotation enforced
         </p>
       </div>
@@ -132,8 +132,8 @@ export default function Dashboard() {
           <div className="grid lg:grid-cols-3 gap-4">
             <Card className="lg:col-span-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
+                <CardTitle className="text-[17px] flex items-center gap-2.5">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
                   Expiry watchlist
                 </CardTitle>
               </CardHeader>
@@ -145,11 +145,11 @@ export default function Dashboard() {
                     .map((t) => (
                       <div
                         key={t.id}
-                        className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3.5 py-2.5 hover:shadow-sm transition-shadow"
+                        className="glass rounded-2xl px-4 py-3 hover:shadow-md transition-shadow"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{t.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-[15px] font-medium truncate">{t.name}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
                             {CATEGORY_META[t.category]?.label} · {t.onHand} on hand
                           </p>
                         </div>
@@ -169,9 +169,9 @@ export default function Dashboard() {
                     (t) => !t.isExpired && t.expiring30Qty === 0 && t.expiring60Qty === 0 && t.expiring90Qty === 0
                   ) ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <ShieldAlert className="h-8 w-8 text-ok mb-2" />
-                      <p className="text-sm font-medium">All clear</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <ShieldAlert className="h-9 w-9 text-ok mb-2" />
+                      <p className="text-[15px] font-medium">All clear</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         No stock expiring within the next 90 days
                       </p>
                     </div>
@@ -182,7 +182,7 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Category split</CardTitle>
+                <CardTitle className="text-[17px]">Category split</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -214,7 +214,7 @@ export default function Dashboard() {
                       );
                       return (
                         <div key={cat}>
-                          <div className="flex items-center justify-between text-xs mb-1">
+                          <div className="flex items-center justify-between text-sm mb-1">
                             <span className="font-medium">{CATEGORY_META[cat]?.label}</span>
                             <span className="text-muted-foreground">{qty.toLocaleString()}</span>
                           </div>
@@ -237,17 +237,17 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-primary" />
+                <CardTitle className="text-[17px] flex items-center gap-2.5">
+                  <ClipboardList className="h-5 w-5 text-primary" />
                 Items requiring attention
               </CardTitle>
             </CardHeader>
             <CardContent>
               {alerts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Box className="h-8 w-8 text-ok mb-2" />
-                  <p className="text-sm font-medium">Nothing needs attention</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <Box className="h-9 w-9 text-ok mb-2" />
+                  <p className="text-[15px] font-medium">Nothing needs attention</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     All stock levels are healthy and clear of expiry concerns
                   </p>
                 </div>
@@ -276,23 +276,23 @@ function AlertRow({ t }: { t: StockTotal }) {
   return (
     <Link
       href="/transactions"
-      className="flex items-center justify-between gap-3 py-3 group hover:bg-accent/40 rounded-lg px-2 -mx-2 transition-colors"
+          className="flex items-center justify-between gap-3 py-3.5 group hover:bg-accent/50 rounded-xl px-3 -mx-3 transition-colors"
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3.5 min-w-0">
         <span
-          className={`h-2 w-2 rounded-full shrink-0 ${
+          className={`h-3 w-3 rounded-full shrink-0 ${
             health === "danger" ? "bg-danger" : health === "warning" ? "bg-warning" : "bg-ok"
           }`}
         />
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{t.name}</p>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">{reasons.join(" · ")}</p>
+          <p className="text-[15px] font-medium truncate">{t.name}</p>
+          <p className="text-sm text-muted-foreground truncate mt-0.5">{reasons.join(" · ")}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-sm font-semibold tabular-nums">{t.onHand}</span>
-        <span className="text-xs text-muted-foreground">{t.unitOfMeasure}</span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+        <span className="text-[15px] font-semibold tabular-nums">{t.onHand}</span>
+        <span className="text-sm text-muted-foreground">{t.unitOfMeasure}</span>
+        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
       </div>
     </Link>
   );
