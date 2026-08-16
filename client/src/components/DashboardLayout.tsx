@@ -21,15 +21,19 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { Activity, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+export const menuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Package, label: "Items", path: "/items" },
+  { icon: PanelsTopLeft, label: "Stock In / Out", path: "/transactions" },
+  { icon: Activity, label: "Consumption", path: "/consumption" },
+  { icon: HeartPulse, label: "Sessions", path: "/sessions" },
+  { icon: FileText, label: "Reports", path: "/reports" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -168,11 +172,14 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
+                  <HeartPulse className="h-5 w-5 text-primary shrink-0" />
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    Dialysis Stock Tracker
                   </span>
                 </div>
-              ) : null}
+              ) : (
+                <HeartPulse className="h-5 w-5 text-primary shrink-0" />
+              )}
             </div>
           </SidebarHeader>
 
