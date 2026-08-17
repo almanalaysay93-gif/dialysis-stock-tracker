@@ -18,6 +18,12 @@ const categoryEnum = z.enum([
   "PD supplies",
 ]);
 const reasonEnum = z.enum(["issued", "adjusted", "written off", "returned"]);
+
+/** Signed whole-day difference between two ISO date strings (b - a). */
+function daysBetween(a: string, b: string): number {
+  const ms = new Date(b + "T00:00:00Z").getTime() - new Date(a + "T00:00:00Z").getTime();
+  return Math.round(ms / 86_400_000);
+}
 const sessionTypeEnum = z.enum(["HD", "PD"]);
 
 export const appRouter = router({
@@ -377,6 +383,45 @@ export const appRouter = router({
   /** Per-item stock-level metrics: days of supply, last/next delivery, incoming qty */
   stockMetrics: router({
     list: protectedProcedure.query(() => db.getDeliveryMetrics()),
+  }),
+
+  /** FIFO stock rotation: batches ordered earliest-received first so oldest stock is used first */
+  rotation: router({
+    list: protectedProcedure.query(async () => {
+      const [batchRows, itemRows] = await Promise.all([db.listBatches(), db.listItems()]);
+      const itemById = new Map(itemRows.map((i) => [i.id, i]));
+      const todayIso = new Date().toISOString().slice(0, 10);
+
+      const rows = batchRows.map((b) => {
+        const item = itemById.get(b.itemId);
+        const receivedAt = b.createdAt instanceof Date ? b.createdAt.toISOString().slice(0, 10) : String(b.createdAt).slice(0, 10);
+        const daysOnShelf = Math.max(0, daysBetween(receivedAt, todayIso));
+        const daysUntilExpiry = daysBetween(todayIso, b.expiryDate);
+        const ageBucket = daysOnShelf > 90 ? ">90d" : daysOnShelf > 60 ? "61–90d" : daysOnShelf > 30 ? "31–60d" : "≤30d";
+        return {
+          batchId: b.id,
+          itemId: b.itemId,
+          itemName: item?.name ?? `Item #${b.itemId}`,
+          category: item?.category ?? "other",
+          lotNumber: b.lotNumber,
+          supplier: b.supplier,
+          quantityReceived: b.quantityReceived,
+          quantityOnHand: b.quantityOnHand,
+          expiryDate: b.expiryDate,
+          isQuarantined: b.isQuarantined,
+          receivedAt,
+          daysOnShelf,
+          daysUntilExpiry,
+          ageBucket,
+        };
+      });
+
+      // FIFO: earliest received first; tie-break by earliest expiry
+      return rows.sort((a, b) => {
+        if (a.receivedAt === b.receivedAt) return a.expiryDate.localeCompare(b.expiryDate);
+        return a.receivedAt.localeCompare(b.receivedAt);
+      });
+    }),
   }),
 
   /** Calendar events for the delivery calendar: deliveries, expiry, low stock */

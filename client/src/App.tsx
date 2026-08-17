@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import CalendarPage from "./pages/Calendar";
 import PurchaseOrders from "./pages/PurchaseOrders";
+import Rotation from "./pages/Rotation";
 import Consumption from "./pages/Consumption";
 import Dashboard from "./pages/Dashboard";
 import Items from "./pages/Items";
@@ -24,6 +25,7 @@ function Router() {
         <Route path={"/consumption"} component={Consumption} />
         <Route path={"/calendar"} component={CalendarPage} />
         <Route path={"/purchase-orders"} component={PurchaseOrders} />
+        <Route path={"/rotation"} component={Rotation} />
         <Route path={"/sessions"} component={Sessions} />
         <Route path={"/reports"} component={Reports} />
         <Route path={"/404"} component={NotFound} />

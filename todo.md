@@ -63,3 +63,10 @@
 - [x] Server procedures: purchaseOrders router (list, create, update, delete), stockMetrics, calendar events
 - [x] Tests for PO creation/delivery, days-of-supply calculation
 - [x] Type-check, screenshots, checkpoint
+
+## FIFO stock rotation (user request)
+- [x] Review existing batch table (receivedAt / expiry) and design FIFO ordering (earliest received date first; tie-break by expiry)
+- [x] Add `rotation.list` endpoint in routers.ts: batches grouped with items, sorted first-in-first-out, with freshness indicators
+- [x] Build /rotation "Stock Rotation" page: FIFO tables per category + overall, showing oldest stock to use first, remaining shelf life, and flags for stale/aging stock
+- [x] Register route + sidebar nav entry, type-check, vitest coverage for FIFO ordering
+- [x] Screenshots, checkpoint + deliver
