@@ -10,8 +10,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit generate && node migrate.mjs",
+    "db:migrate": "node migrate.mjs",
     "seed": "node seed.mjs",
     "build:vercel": "vite build && node vercel-build.mjs"
   },

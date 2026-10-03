@@ -27,6 +27,8 @@ function daysBetween(a: string, b: string): number {
 const sessionTypeEnum = z.enum(["HD", "PD"]);
 
 export const appRouter = router({
+  // Public health check: database state as a category plus an error code.
+  health: publicProcedure.query(() => db.getDbStatus()),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     options: publicProcedure.query(() => ({ google: isGoogleEnabled() })),

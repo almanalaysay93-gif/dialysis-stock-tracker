@@ -11,13 +11,43 @@ export async function getDb() {
     try {
       // prepare: false keeps the client compatible with Supabase's transaction
       // pooler (port 6543), which does not support prepared statements.
-      _db = drizzle(postgres(process.env.DATABASE_URL, { prepare: false }));
+      // connect_timeout: fail in 10 s instead of hanging a request for 30 s
+      // when the database cannot be reached.
+      _db = drizzle(postgres(process.env.DATABASE_URL, { prepare: false, connect_timeout: 10 }));
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
   }
   return _db;
+}
+
+export type DbStatus = "ok" | "not_configured" | "not_migrated" | "auth_failed" | "unreachable" | "error";
+
+/**
+ * Coarse database state for the public health check. Returns a category and
+ * the driver's error code only, never the message, host or credentials.
+ */
+export async function getDbStatus(): Promise<{ db: DbStatus; code?: string }> {
+  const db = await getDb();
+  if (!db) return { db: "not_configured" };
+  try {
+    // Touches the newest column, so an out-of-date schema is caught too.
+    await db.select({ id: users.id, email: users.email }).from(users).limit(1);
+    return { db: "ok" };
+  } catch (error) {
+    // Drizzle wraps the driver error; the code lives on the cause.
+    const source = (error as { cause?: unknown }).cause ?? error;
+    const raw = (source as { code?: unknown }).code;
+    const code = typeof raw === "string" && /^[A-Za-z0-9_]{1,40}$/.test(raw) ? raw : undefined;
+    const message = source instanceof Error ? source.message : "";
+    let status: DbStatus = "error";
+    if (code === "42P01" || code === "42703") status = "not_migrated";
+    else if (code === "28P01" || code === "28000" || /tenant or user not found/i.test(message)) status = "auth_failed";
+    else if (code && /^(ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EAI_AGAIN|CONNECT_TIMEOUT|CONNECTION_CLOSED|CONNECTION_ENDED)$/.test(code))
+      status = "unreachable";
+    return { db: status, code };
+  }
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
