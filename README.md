@@ -36,6 +36,7 @@ Passwords need 12 or more characters and are stored as scrypt hashes. A username
 | `pnpm dev` | Dev server with hot reload |
 | `pnpm build` | Builds client to `dist/public` and server to `dist/index.js` |
 | `pnpm start` | Runs the production build |
+| `pnpm build:vercel` | Builds the Vercel deployment into `.vercel/output` (Vercel runs this itself) |
 | `pnpm check` | TypeScript type-check |
 | `pnpm test` | Vitest. Tests marked "real DB" run only when `DATABASE_URL` is set, and they write to that database, so point it at a non-production one |
 | `pnpm db:push` | Generate a migration from `drizzle/schema.ts` and apply it |
@@ -45,6 +46,18 @@ Passwords need 12 or more characters and are stored as scrypt hashes. A username
 
 The server connects to Postgres directly with `DATABASE_URL`. Row level security is enabled on every table with no policies, so the Supabase Data API (publishable/anon key) cannot read or write any of them. Keep `DATABASE_URL` and `JWT_SECRET` on the server only.
 
-## Deploying
+## Deploying on Vercel
+
+The repo is set up for Vercel: `vercel.json` runs `pnpm build:vercel`, which builds the client and bundles the API into one function, written to `.vercel/output` by `vercel-build.mjs`.
+
+1. In the Vercel project, open **Settings → Environment Variables** and add:
+   - `DATABASE_URL`: the Supabase **transaction pooler** string (port 6543). Supabase recommends this mode for serverless functions.
+   - `JWT_SECRET`: 32 or more random characters.
+2. From your own machine, with `.env` pointing at the same Supabase database through the direct connection or session pooler (port 5432), run `pnpm db:migrate` and `pnpm user:set <username> "<name>" admin`. Vercel does not run migrations.
+3. Redeploy so the function picks up the variables.
+
+Without the two variables the page loads but every sign-in fails.
+
+## Deploying elsewhere
 
 Any Node host works. Set `DATABASE_URL`, `JWT_SECRET` and `PORT`, run `pnpm build`, then `pnpm start`. Serve it over HTTPS so the session cookie is marked `Secure`.

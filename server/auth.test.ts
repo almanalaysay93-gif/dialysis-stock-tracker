@@ -6,12 +6,15 @@ import { appRouter } from "./routers";
 
 const mockGetUserByUsername = vi.fn();
 const mockGetUserById = vi.fn();
+const mockRecordFailedLogin = vi.fn();
+const mockRecordSignIn = vi.fn();
 
 vi.mock("./db", () => ({
   getDb: async () => null,
   getUserByUsername: (...args: unknown[]) => mockGetUserByUsername(...args),
   getUserById: (...args: unknown[]) => mockGetUserById(...args),
-  touchLastSignedIn: async () => {},
+  recordFailedLogin: (...args: unknown[]) => mockRecordFailedLogin(...args),
+  recordSignIn: (...args: unknown[]) => mockRecordSignIn(...args),
 }));
 
 type CookieCall = { name: string; value?: string; options: Record<string, unknown> };
@@ -86,6 +89,8 @@ describe("auth.login", () => {
     expect(mockGetUserById).toHaveBeenCalledWith(7);
     expect(user).toEqual(sessionUser);
     expect(user).not.toHaveProperty("passwordHash");
+    expect(mockRecordSignIn).toHaveBeenCalledWith(7);
+    expect(mockRecordFailedLogin).not.toHaveBeenCalled();
   });
 
   it("rejects a wrong password and an unknown user with the same error", async () => {
@@ -97,46 +102,48 @@ describe("auth.login", () => {
     await expect(caller.auth.login({ username: "wrong.pw", password: "nope" })).rejects.toThrow(
       GENERIC_ERROR
     );
+    // A wrong password counts toward the lock: 5 in a row, 15 minutes.
+    expect(mockRecordFailedLogin).toHaveBeenCalledWith(7, 5, 15);
     mockGetUserByUsername.mockResolvedValueOnce(undefined);
     await expect(caller.auth.login({ username: "ghost", password: "nope" })).rejects.toThrow(
       GENERIC_ERROR
     );
+    // An unknown username has no row to count against.
+    expect(mockRecordFailedLogin).toHaveBeenCalledOnce();
     expect(setCookies).toHaveLength(0);
   });
 
-  it("locks a username after 5 failures, even for the right password", async () => {
+  it("refuses the right password while the account is locked, with the same error", async () => {
     const passwordHash = await hashPassword("correct horse battery");
-    mockGetUserByUsername.mockResolvedValue({ ...sessionUser, passwordHash });
+    mockGetUserByUsername.mockResolvedValue({
+      ...sessionUser,
+      passwordHash,
+      lockedUntil: new Date(Date.now() + 10 * 60_000),
+    });
     const { ctx, setCookies } = createContext();
-    const caller = appRouter.createCaller(ctx);
 
-    for (let i = 0; i < 5; i++) {
-      await expect(caller.auth.login({ username: "locked.out", password: "nope" })).rejects.toThrow(
-        GENERIC_ERROR
-      );
-    }
-    // Locked: the right password is refused too, with the same message as any other failure.
     await expect(
-      caller.auth.login({ username: "locked.out", password: "correct horse battery" })
+      appRouter.createCaller(ctx).auth.login({ username: "nurse.rivera", password: "correct horse battery" })
     ).rejects.toThrow(GENERIC_ERROR);
     expect(setCookies).toHaveLength(0);
-  }, 30000);
+    expect(mockRecordSignIn).not.toHaveBeenCalled();
+  });
 
-  it("does not lock or track usernames that do not exist", async () => {
-    mockGetUserByUsername.mockResolvedValue(undefined);
-    const { ctx, setCookies } = createContext();
-    const caller = appRouter.createCaller(ctx);
-    for (let i = 0; i < 6; i++) {
-      await expect(caller.auth.login({ username: "made.up", password: "nope" })).rejects.toThrow(GENERIC_ERROR);
-    }
-    // The account is created afterwards: earlier misses must not have locked the name.
+  it("lets the user back in once the lock has expired", async () => {
     const passwordHash = await hashPassword("correct horse battery");
-    mockGetUserByUsername.mockResolvedValue({ ...sessionUser, passwordHash });
+    mockGetUserByUsername.mockResolvedValue({
+      ...sessionUser,
+      passwordHash,
+      lockedUntil: new Date(Date.now() - 1000),
+    });
+    const { ctx, setCookies } = createContext();
+
     await expect(
-      caller.auth.login({ username: "made.up", password: "correct horse battery" })
+      appRouter.createCaller(ctx).auth.login({ username: "nurse.rivera", password: "correct horse battery" })
     ).resolves.toEqual({ success: true });
     expect(setCookies).toHaveLength(1);
-  }, 30000);
+    expect(mockRecordSignIn).toHaveBeenCalledWith(7);
+  });
 });
 
 describe("session cookie", () => {

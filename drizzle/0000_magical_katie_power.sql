@@ -112,6 +112,8 @@ CREATE TABLE "users" (
 	"passwordHash" text NOT NULL,
 	"name" text,
 	"role" "user_role" DEFAULT 'user' NOT NULL,
+	"failedLogins" integer DEFAULT 0 NOT NULL,
+	"lockedUntil" timestamp with time zone,
 	"createdAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"updatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"lastSignedIn" timestamp with time zone DEFAULT now() NOT NULL,

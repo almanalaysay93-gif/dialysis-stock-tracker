@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, gt, inArray, like } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { InsertUser, users } from "../drizzle/schema";
@@ -21,9 +21,14 @@ export async function getDb() {
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
-const { passwordHash: _passwordHash, ...publicUserColumns } = getTableColumns(users);
+const {
+  passwordHash: _passwordHash,
+  failedLogins: _failedLogins,
+  lockedUntil: _lockedUntil,
+  ...publicUserColumns
+} = getTableColumns(users);
 
-/** Full row including the password hash. Only for credential checks. */
+/** Full row including the password hash and lock state. Only for credential checks. */
 export async function getUserByUsername(username: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -48,13 +53,32 @@ export async function createUser(data: InsertUser) {
 export async function setUserPassword(id: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+  // A reset also lifts any lock, so a locked-out user can get back in.
+  await db.update(users).set({ passwordHash, failedLogins: 0, lockedUntil: null }).where(eq(users.id, id));
 }
 
-export async function touchLastSignedIn(id: number) {
+/**
+ * Counts one wrong password. On the `maxFailures`-th in a row the counter
+ * resets and the account is locked for `lockMinutes`. One atomic statement, so
+ * concurrent attempts cannot skip the lock.
+ */
+export async function recordFailedLogin(id: number, maxFailures: number, lockMinutes: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const reachedLimit = sql`${users.failedLogins} + 1 >= ${maxFailures}`;
+  await db
+    .update(users)
+    .set({
+      failedLogins: sql`CASE WHEN ${reachedLimit} THEN 0 ELSE ${users.failedLogins} + 1 END`,
+      lockedUntil: sql`CASE WHEN ${reachedLimit} THEN now() + make_interval(mins => ${lockMinutes}) ELSE ${users.lockedUntil} END`,
+    })
+    .where(eq(users.id, id));
+}
+
+export async function recordSignIn(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
+  await db.update(users).set({ lastSignedIn: new Date(), failedLogins: 0, lockedUntil: null }).where(eq(users.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

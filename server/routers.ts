@@ -43,7 +43,7 @@ export const appRouter = router({
               "Username or password is incorrect. A username is locked for 15 minutes after 5 failed attempts.",
           });
         }
-        await db.touchLastSignedIn(user.id);
+        await db.recordSignIn(user.id);
         ctx.res.cookie(COOKIE_NAME, await createSessionToken(user.id), {
           ...getSessionCookieOptions(ctx.req),
           maxAge: SESSION_MS,

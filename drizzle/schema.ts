@@ -47,6 +47,10 @@ export const users = pgTable("users", {
   passwordHash: text("passwordHash").notNull(),
   name: text("name"),
   role: userRole("role").default("user").notNull(),
+  /** Consecutive wrong passwords since the last sign-in or lock. */
+  failedLogins: integer("failedLogins").default(0).notNull(),
+  /** Sign-in is refused until this time. Kept in the database so every server instance sees it. */
+  lockedUntil: timestamp("lockedUntil", { withTimezone: true }),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),

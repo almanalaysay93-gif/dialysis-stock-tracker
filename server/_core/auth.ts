@@ -38,31 +38,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(actual, expected);
 }
 
-// ── Failed sign-in throttle ──────────────────────────────────────────────────
-// Only existing usernames are tracked, so the map cannot grow past the number
-// of accounts and cannot be flushed by flooding made-up usernames.
-// ponytail: in-memory and per process, so a restart clears it. Move the counter
-// into the users table if the app ever runs on more than one instance.
+// ── Failed sign-in lock ──────────────────────────────────────────────────────
+// The counter and the lock live on the user row, so they hold across restarts
+// and across server instances (the app runs as a serverless function on Vercel).
 const MAX_FAILURES = 5;
-const LOCK_MS = 15 * 60 * 1000;
-const failures = new Map<string, { count: number; resetAt: number }>();
-
-function isLockedOut(username: string): boolean {
-  const entry = failures.get(username);
-  if (!entry) return false;
-  if (entry.resetAt <= Date.now()) {
-    failures.delete(username);
-    return false;
-  }
-  return entry.count >= MAX_FAILURES;
-}
-
-function recordFailure(username: string) {
-  const now = Date.now();
-  const entry = failures.get(username);
-  if (entry && entry.resetAt > now) entry.count += 1;
-  else failures.set(username, { count: 1, resetAt: now + LOCK_MS });
-}
+const LOCK_MINUTES = 15;
 
 // Computed at startup so the first unknown-username request is not slower than later ones.
 const dummyHash = hashPassword(randomBytes(16).toString("hex"));
@@ -76,12 +56,12 @@ const dummyHash = hashPassword(randomBytes(16).toString("hex"));
 export async function checkCredentials(username: string, password: string) {
   const user = await db.getUserByUsername(username);
   const ok = await verifyPassword(password, user?.passwordHash ?? (await dummyHash));
-  if (!user || isLockedOut(username)) return null;
+  if (!user) return null;
+  if (user.lockedUntil && user.lockedUntil > new Date()) return null;
   if (!ok) {
-    recordFailure(username);
+    await db.recordFailedLogin(user.id, MAX_FAILURES, LOCK_MINUTES);
     return null;
   }
-  failures.delete(username);
   return user;
 }
 
