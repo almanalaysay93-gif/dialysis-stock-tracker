@@ -52,3 +52,14 @@ Unified memory for all agents. Append new entries at the bottom.
 - Fonts load without blocking initial rendering. HTML includes an immediate loading shell.
 - Verified: TypeScript check, Vite production build, Vercel output assembly, 30 unit tests passed. 12 real-DB tests skipped without a test database. Browser-harness confirmed transactions renders with mock authenticated API data and does not download Reports.
 - Production unchanged. Deployment approval requested and pending.
+
+## 2026-10-03: Performance changes deployed (Codex)
+- [stated] User authorized production deployment: "make it live".
+- Pushed commit `3de10ef` to `origin/main`. Vercel production now serves the loading shell, nonblocking fonts and split page bundles.
+- Verified production `/transactions`: Google sign-in rendered, auth.me and auth.options batched into one request, Reports bundle absent. Public health endpoint returns `db: ok`.
+
+## 2026-10-03: Interaction animations (Codex)
+- [stated] User requested heavy mouse click, hover, table and button animations.
+- Added bounded teal/navy click rings with eight sparks, spring button lifts and icon rotation, press compression, sidebar/tab hover motion, staggered row entrances and teal hover accents on tables and transaction lists.
+- Uses CSS plus one delegated click listener. Maximum six visible bursts, timed cleanup, reduced-motion support, no new dependencies. Entry JS +0.44 KB gzip, CSS +0.62 KB gzip.
+- Verified TypeScript and production build. Browser-harness with mock data verified transaction row animation, click bursts, cleanup, hover targeting and reduced-motion suppression.

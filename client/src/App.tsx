@@ -6,6 +6,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Suspense } from "react";
+import InteractionEffects from "./components/InteractionEffects";
 import { CalendarPage, PurchaseOrders, Rotation, Consumption, Dashboard, Items, Reports, Sessions, Transactions } from "./lib/pages";
 
 function Router() {
@@ -36,6 +37,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster position="top-right" richColors />
+          <InteractionEffects />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
