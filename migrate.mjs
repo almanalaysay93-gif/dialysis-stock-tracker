@@ -31,10 +31,20 @@ try {
   await migrate(drizzle(client), { migrationsFolder: "drizzle" });
   console.log("[migrate] database is up to date");
 } catch (error) {
-  // Code only: the full error can carry the connection string's host.
   const source = error?.cause ?? error;
-  console.error(`[migrate] failed (${source?.code ?? "no code"}): ${source?.message ?? source}`);
-  process.exitCode = 1;
+  const code = String(source?.code ?? "no code");
+  console.error(`[migrate] failed (${code}): ${source?.message ?? source}`);
+  // Could not connect or log in: nothing was changed and the app cannot work
+  // against this database whichever build is live. On Vercel, let the deploy
+  // through so the health check reflects the current settings. A migration
+  // that connected and then failed was rolled back and does block the deploy,
+  // so new code never ships ahead of its schema.
+  const noConnection =
+    /^(ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EAI_AGAIN|CONNECT_TIMEOUT|CONNECTION_CLOSED|CONNECTION_ENDED|28P01|28000|3D000)$/.test(
+      code
+    ) || /tenant or user not found/i.test(String(source?.message ?? ""));
+  if (onVercel && noConnection) console.warn("[migrate] database not reachable; continuing the build without migrating");
+  else process.exitCode = 1;
 } finally {
   await client.end({ timeout: 5 });
 }

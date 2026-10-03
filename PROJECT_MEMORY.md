@@ -18,7 +18,9 @@ Unified memory for all agents. Append new entries at the bottom.
 - Session: HS256 JWT in httpOnly SameSite=Lax cookie `app_session_id`, 12 h (`SESSION_MS` in `shared/const.ts`).
 - `deductFefo` runs in one transaction with `SELECT ... FOR UPDATE`: an over-issue rolls back, concurrent issues cannot double-deduct.
 - Sign-in is Google only (user decision 2026-10-03: no username/password). OIDC code flow + PKCE in `server/_core/google.ts`, routes `/api/auth/google/start|callback`. Only addresses in `ADMIN_EMAILS` (user stated: `share@spmcdvo.net`) can sign in and become admins. Needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`; redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback`. Password login, lockout and the `user:set` script were removed. Columns `passwordHash`, `failedLogins`, `lockedUntil` remain unused.
-- Every tRPC procedure except `auth.me`, `auth.login`, `auth.logout` requires a session.
+- Migrations: `migrate.mjs` (drizzle-orm migrator, prepared statements off) runs first in `pnpm build:vercel` on production builds only; preview builds skip it. Connection/login failures let the deploy through; a migration that connects then fails blocks it. `pnpm db:migrate` runs the same script by hand.
+- Health check: public `health` procedure (`/api/trpc/health`) returns `{ db, code }` with db = ok | not_configured | not_migrated | auth_failed | unreachable | error. First stop when sign-in fails at the database stage, since Vercel logs are not readable by agents.
+- Every tRPC procedure except `health`, `auth.me`, `auth.options`, `auth.logout` requires a session.
 - RLS enabled on all 9 tables, no policies: server connects as table owner; Supabase Data API roles get nothing.
 
 **Env**: `DATABASE_URL` (local: Supabase direct or session pooler, port 5432; Vercel: transaction pooler, port 6543), `JWT_SECRET` (32+ chars, server refuses to run without it), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`, `PORT` (self-hosting only).
@@ -35,3 +37,8 @@ Unified memory for all agents. Append new entries at the bottom.
 - Git history still shows the 6 original commits under the previous platform's author identity (user chose to keep history).
 - `todo.md` is the original build checklist; left in place.
 - Known pre-existing issues left untouched: single 290 KB gz JS chunk, `maximum-scale=1` in the viewport meta, 50 MB JSON body limit in `server/_core/index.ts`.
+
+## 2026-10-03: production sign-in blocked by database address (Claude)
+- Production health check returned `unreachable` / `ENOTFOUND`: the host in Vercel's `DATABASE_URL` does not resolve from Vercel. Most likely the Supabase Direct connection string (IPv6-only) was used; Vercel needs the Transaction pooler string (port 6543). Only the user can change it (no agent has Vercel access).
+- An earlier on-screen hint blamed a missing migration; that was a guess and it was wrong. The sign-in screen now names the actual database state.
+- No migration has reached the production database yet. Once `DATABASE_URL` is correct, the next production deploy applies them automatically.

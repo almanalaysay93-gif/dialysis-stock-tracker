@@ -13,7 +13,7 @@
     "db:push": "drizzle-kit generate && node migrate.mjs",
     "db:migrate": "node migrate.mjs",
     "seed": "node seed.mjs",
-    "build:vercel": "vite build && node vercel-build.mjs"
+    "build:vercel": "node migrate.mjs && vite build && node vercel-build.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

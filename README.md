@@ -43,7 +43,7 @@ If the consent screen is set to Internal (Google Workspace only), the admin addr
 | `pnpm check` | TypeScript type-check |
 | `pnpm test` | Vitest. Tests marked "real DB" run only when `DATABASE_URL` is set, and they write to that database, so point it at a non-production one |
 | `pnpm db:push` | Generate a migration from `drizzle/schema.ts` and apply it |
-| `pnpm db:migrate` | Apply existing migrations |
+| `pnpm db:migrate` | Apply existing migrations by hand (Vercel production deploys do this automatically) |
 
 ## Database access
 
@@ -51,16 +51,28 @@ The server connects to Postgres directly with `DATABASE_URL`. Row level security
 
 ## Deploying on Vercel
 
-The repo is set up for Vercel: `vercel.json` runs `pnpm build:vercel`, which builds the client and bundles the API into one function, written to `.vercel/output` by `vercel-build.mjs`.
+The repo is set up for Vercel: `vercel.json` runs `pnpm build:vercel`, which applies pending database migrations, builds the client and bundles the API into one function, written to `.vercel/output` by `vercel-build.mjs`.
 
 1. In the Vercel project, open **Settings → Environment Variables** and add:
-   - `DATABASE_URL`: the Supabase **transaction pooler** string (port 6543). Supabase recommends this mode for serverless functions.
+   - `DATABASE_URL`: the Supabase **Transaction pooler** string (port 6543), from the Supabase dashboard under **Connect**. Do not use the **Direct connection** string here: it is IPv6-only and Vercel cannot reach it, which shows up as `unreachable` / `ENOTFOUND` on the health check.
    - `JWT_SECRET`: 32 or more random characters.
 2. Add the Google variables from the Sign-in section.
-3. From your own machine, with `.env` pointing at the same Supabase database through the direct connection or session pooler (port 5432), run `pnpm db:migrate`. Vercel does not run migrations.
-4. Redeploy so the function picks up the variables.
+3. Redeploy. Environment variable changes only apply to new deployments.
 
-Without the variables the page loads but sign-in fails.
+Every production deploy runs the migrations first, so the tables are created and kept up to date without any manual step. Preview deploys never touch the database. If a migration connects and then fails, the deploy is stopped and the previous version stays live.
+
+### Health check
+
+`https://<your-domain>/api/trpc/health` reports the database state:
+
+| `db` | Meaning |
+|---|---|
+| `ok` | Connected and the schema is current |
+| `not_configured` | `DATABASE_URL` is not set |
+| `unreachable` | The host cannot be found or reached; check the address in `DATABASE_URL` |
+| `auth_failed` | The database rejected the username or password |
+| `not_migrated` | Connected, but the tables are missing or out of date |
+| `error` | Something else; see the `code` field |
 
 ## Deploying elsewhere
 

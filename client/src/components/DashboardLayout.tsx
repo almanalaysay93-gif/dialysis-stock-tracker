@@ -40,9 +40,15 @@ function LoginScreen() {
     const detail: Record<string, string> = {
       exchange: "Google rejected the request. The client secret may be wrong.",
       verify: "Google's reply could not be verified, or the email is not verified.",
-      database: "The database is not ready. The latest migration may not be applied.",
+      database: "The database could not be used.",
     };
-    const reason = detail[params.get("step") ?? ""];
+    const database: Record<string, string> = {
+      not_configured: "No database address is set on the server.",
+      unreachable: "The server cannot find or reach the database. Its address may be wrong.",
+      auth_failed: "The database rejected the server's username or password.",
+      not_migrated: "The database tables have not been created yet.",
+    };
+    const reason = database[params.get("db") ?? ""] ?? detail[params.get("step") ?? ""];
     return `Google sign-in did not complete.${reason ? ` ${reason}` : ""} Try again.`;
   });
   useEffect(() => {

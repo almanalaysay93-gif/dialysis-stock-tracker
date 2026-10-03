@@ -156,6 +156,8 @@ googleRouter.get("/callback", async (req, res) => {
     res.redirect(302, "/");
   } catch (error) {
     console.error(`[Google sign-in] failed at ${step}:`, error instanceof Error ? error.message : error);
-    res.redirect(302, `/?login_error=google&step=${step}`);
+    // For a database failure, say which kind: unreachable, wrong password, no tables...
+    const dbState = step === "database" ? `&db=${(await db.getDbStatus()).db}` : "";
+    res.redirect(302, `/?login_error=google&step=${step}${dbState}`);
   }
 });
