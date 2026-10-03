@@ -50,6 +50,18 @@ export async function createUser(data: InsertUser) {
   return row;
 }
 
+/** Creates the Google admin account on first sign-in, or re-asserts the admin role. */
+export async function upsertGoogleAdmin(email: string, name: string | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [row] = await db
+    .insert(users)
+    .values({ username: email, email, name, role: "admin" })
+    .onConflictDoUpdate({ target: users.email, set: { role: "admin", failedLogins: 0, lockedUntil: null } })
+    .returning({ id: users.id });
+  return row;
+}
+
 export async function setUserPassword(id: number, passwordHash: string) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");

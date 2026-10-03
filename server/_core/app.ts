@@ -3,6 +3,7 @@ import express from "express";
 import { appRouter } from "../routers";
 import { assertSessionSecret } from "./auth";
 import { createContext } from "./context";
+import { googleRouter } from "./google";
 
 // The API as an Express app with no listener. `index.ts` serves it on a port
 // (dev and self-hosting); on Vercel it is bundled into a function by
@@ -15,6 +16,7 @@ const app = express();
 // Configure body parser with larger size limit for file uploads
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use("/api/auth/google", googleRouter);
 // tRPC API
 app.use(
   "/api/trpc",

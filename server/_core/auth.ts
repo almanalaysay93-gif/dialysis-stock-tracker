@@ -56,7 +56,8 @@ const dummyHash = hashPassword(randomBytes(16).toString("hex"));
 export async function checkCredentials(username: string, password: string) {
   const user = await db.getUserByUsername(username);
   const ok = await verifyPassword(password, user?.passwordHash ?? (await dummyHash));
-  if (!user) return null;
+  // Google-only accounts have no password to guess.
+  if (!user || !user.passwordHash) return null;
   if (user.lockedUntil && user.lockedUntil > new Date()) return null;
   if (!ok) {
     await db.recordFailedLogin(user.id, MAX_FAILURES, LOCK_MINUTES);
@@ -72,7 +73,7 @@ export function assertSessionSecret() {
   }
 }
 
-function sessionSecret() {
+export function sessionSecret() {
   assertSessionSecret();
   return new TextEncoder().encode(ENV.cookieSecret);
 }

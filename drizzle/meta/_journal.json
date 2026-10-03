@@ -8,6 +8,13 @@
       "when": 1791000609089,
       "tag": "0000_magical_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791001891197,
+      "tag": "0001_outgoing_scorpion",
+      "breakpoints": true
     }
   ]
 }

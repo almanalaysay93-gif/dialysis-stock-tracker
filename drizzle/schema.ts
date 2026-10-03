@@ -44,7 +44,10 @@ export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   /** Stored lowercase; sign-in is case-insensitive. */
   username: varchar("username", { length: 64 }).notNull().unique(),
-  passwordHash: text("passwordHash").notNull(),
+  /** Null for accounts that only sign in with Google. */
+  passwordHash: text("passwordHash"),
+  /** Set for Google accounts. Stored lowercase. */
+  email: varchar("email", { length: 320 }).unique(),
   name: text("name"),
   role: userRole("role").default("user").notNull(),
   /** Consecutive wrong passwords since the last sign-in or lock. */

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { checkCredentials, createSessionToken } from "./_core/auth";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { isGoogleEnabled } from "./_core/google";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { batches } from "../drizzle/schema";
@@ -30,6 +31,7 @@ const sessionTypeEnum = z.enum(["HD", "PD"]);
 export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    options: publicProcedure.query(() => ({ google: isGoogleEnabled() })),
     login: publicProcedure
       .input(z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }))
       .mutation(async ({ input, ctx }) => {

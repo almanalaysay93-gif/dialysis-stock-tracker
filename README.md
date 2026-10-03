@@ -19,9 +19,22 @@ pnpm dev                    # http://localhost:3000
 
 `DATABASE_URL` comes from the Supabase dashboard under **Connect**. Use the direct connection or the session pooler (port 5432). The direct connection is IPv6 unless the project has the IPv4 add-on; on an IPv4-only network use the session pooler.
 
+## Google sign-in
+
+Google sign-in is for admins. Any Google address listed in `ADMIN_EMAILS` (comma-separated, for example `share@spmcdvo.net`) can sign in with it and gets an admin account on first use. Every other Google account is refused, and Google must report the address as verified.
+
+Setup:
+
+1. Google Cloud Console → **APIs & Services → Credentials → Create credentials → OAuth client ID**, type **Web application**. If asked, configure the consent screen first.
+2. Add the authorized redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local use).
+3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAILS` in `.env` and in Vercel's environment variables, then redeploy.
+4. Run `pnpm db:migrate` against the Supabase database (this branch adds an `email` column).
+
+The "Sign in with Google" button appears only when the client ID and secret are set. If the consent screen is set to "Internal" (Google Workspace only), the admin address must belong to that Workspace.
+
 ## Accounts
 
-Sign-in is username and password. There is no self-registration.
+Username and password sign-in also works, for staff who do not use Google. There is no self-registration.
 
 - Add a user: `pnpm user:set <username> "<display name>"`
 - Add an admin: `pnpm user:set <username> "<display name>" admin`

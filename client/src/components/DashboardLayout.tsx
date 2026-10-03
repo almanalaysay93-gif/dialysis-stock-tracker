@@ -38,6 +38,18 @@ function LoginScreen() {
   const login = trpc.auth.login.useMutation({
     onSuccess: () => utils.invalidate(),
   });
+  const options = trpc.auth.options.useQuery(undefined, { retry: false });
+  // Google sends the browser back to /?login_error=... when sign-in fails.
+  const [googleError] = useState(() => {
+    const code = new URLSearchParams(window.location.search).get("login_error");
+    if (!code) return null;
+    return code === "not_allowed"
+      ? "That Google account is not allowed to sign in."
+      : "Google sign-in did not complete. Try again.";
+  });
+  useEffect(() => {
+    if (googleError) window.history.replaceState(null, "", window.location.pathname);
+  }, [googleError]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -67,6 +79,23 @@ function LoginScreen() {
             </p>
           </div>
         </div>
+        {options.data?.google && (
+          <>
+            <Button asChild variant="outline" size="lg" className="w-full h-11">
+              <a href="/api/auth/google/start">Sign in with Google</a>
+            </Button>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+              <span className="h-px flex-1 bg-border" />
+              or use a username
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </>
+        )}
+        {googleError && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {googleError}
+          </p>
+        )}
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="login-username">Username</Label>
@@ -76,7 +105,7 @@ function LoginScreen() {
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
-              autoFocus
+              autoFocus={!options.data?.google}
               required
               className="h-11"
               value={username}
