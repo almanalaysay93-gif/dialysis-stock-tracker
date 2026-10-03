@@ -13,7 +13,6 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "db:migrate": "drizzle-kit migrate",
     "seed": "node seed.mjs",
-    "user:set": "tsx set-user.ts",
     "build:vercel": "vite build && node vercel-build.mjs"
   },
   "dependencies": {

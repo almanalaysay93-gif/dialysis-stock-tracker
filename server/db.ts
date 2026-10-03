@@ -1,7 +1,7 @@
 import { and, desc, eq, getTableColumns, gt, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { InsertUser, users } from "../drizzle/schema";
+import { users } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -21,33 +21,14 @@ export async function getDb() {
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
-const {
-  passwordHash: _passwordHash,
-  failedLogins: _failedLogins,
-  lockedUntil: _lockedUntil,
-  ...publicUserColumns
-} = getTableColumns(users);
-
-/** Full row including the password hash and lock state. Only for credential checks. */
-export async function getUserByUsername(username: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const rows = await db.select().from(users).where(eq(users.username, username)).limit(1);
-  return rows[0];
-}
+const { passwordHash: _passwordHash, failedLogins: _failedLogins, lockedUntil: _lockedUntil, ...publicUserColumns } =
+  getTableColumns(users);
 
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const rows = await db.select(publicUserColumns).from(users).where(eq(users.id, id)).limit(1);
   return rows[0];
-}
-
-export async function createUser(data: InsertUser) {
-  const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
-  const [row] = await db.insert(users).values(data).returning(publicUserColumns);
-  return row;
 }
 
 /** Creates the Google admin account on first sign-in, or re-asserts the admin role. */
@@ -57,40 +38,15 @@ export async function upsertGoogleAdmin(email: string, name: string | null) {
   const [row] = await db
     .insert(users)
     .values({ username: email, email, name, role: "admin" })
-    .onConflictDoUpdate({ target: users.email, set: { role: "admin", failedLogins: 0, lockedUntil: null } })
+    .onConflictDoUpdate({ target: users.email, set: { role: "admin" } })
     .returning({ id: users.id });
   return row;
-}
-
-export async function setUserPassword(id: number, passwordHash: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
-  // A reset also lifts any lock, so a locked-out user can get back in.
-  await db.update(users).set({ passwordHash, failedLogins: 0, lockedUntil: null }).where(eq(users.id, id));
-}
-
-/**
- * Counts one wrong password. On the `maxFailures`-th in a row the counter
- * resets and the account is locked for `lockMinutes`. One atomic statement, so
- * concurrent attempts cannot skip the lock.
- */
-export async function recordFailedLogin(id: number, maxFailures: number, lockMinutes: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
-  const reachedLimit = sql`${users.failedLogins} + 1 >= ${maxFailures}`;
-  await db
-    .update(users)
-    .set({
-      failedLogins: sql`CASE WHEN ${reachedLimit} THEN 0 ELSE ${users.failedLogins} + 1 END`,
-      lockedUntil: sql`CASE WHEN ${reachedLimit} THEN now() + make_interval(mins => ${lockMinutes}) ELSE ${users.lockedUntil} END`,
-    })
-    .where(eq(users.id, id));
 }
 
 export async function recordSignIn(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(users).set({ lastSignedIn: new Date(), failedLogins: 0, lockedUntil: null }).where(eq(users.id, id));
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

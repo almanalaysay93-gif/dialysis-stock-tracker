@@ -2,71 +2,12 @@ import { COOKIE_NAME, SESSION_MS } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
-import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from "node:crypto";
 import * as db from "../db";
 import { ENV } from "./env";
 
-// ── Password hashing (scrypt, Node stdlib) ───────────────────────────────────
-// OWASP-listed scrypt setting: N=2^15, r=8, p=3. The parameters are stored in
-// each hash, so they can be raised later without invalidating old passwords.
-const SCRYPT = { N: 2 ** 15, r: 8, p: 3 };
-const KEY_LENGTH = 64;
+// Sign-in itself is Google (server/_core/google.ts). This file holds the
+// session cookie that sign-in hands out.
 
-function scryptAsync(password: string, salt: Buffer, keylen: number, options: ScryptOptions) {
-  return new Promise<Buffer>((resolve, reject) => {
-    scrypt(password, salt, keylen, { ...options, maxmem: 64 * 1024 * 1024 }, (err, key) =>
-      err ? reject(err) : resolve(key)
-    );
-  });
-}
-
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await scryptAsync(password, salt, KEY_LENGTH, SCRYPT);
-  return ["scrypt", SCRYPT.N, SCRYPT.r, SCRYPT.p, salt.toString("hex"), key.toString("hex")].join("$");
-}
-
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [scheme, N, r, p, saltHex, keyHex] = stored.split("$");
-  if (scheme !== "scrypt" || !saltHex || !keyHex) return false;
-  const expected = Buffer.from(keyHex, "hex");
-  const actual = await scryptAsync(password, Buffer.from(saltHex, "hex"), expected.length, {
-    N: Number(N),
-    r: Number(r),
-    p: Number(p),
-  });
-  return timingSafeEqual(actual, expected);
-}
-
-// ── Failed sign-in lock ──────────────────────────────────────────────────────
-// The counter and the lock live on the user row, so they hold across restarts
-// and across server instances (the app runs as a serverless function on Vercel).
-const MAX_FAILURES = 5;
-const LOCK_MINUTES = 15;
-
-// Computed at startup so the first unknown-username request is not slower than later ones.
-const dummyHash = hashPassword(randomBytes(16).toString("hex"));
-
-/**
- * Returns the signed-in user, or null for a wrong password, an unknown
- * username or a locked username. All three run one hash check and look the
- * same to the caller, so neither the response nor its timing reveals which
- * usernames exist.
- */
-export async function checkCredentials(username: string, password: string) {
-  const user = await db.getUserByUsername(username);
-  const ok = await verifyPassword(password, user?.passwordHash ?? (await dummyHash));
-  // Google-only accounts have no password to guess.
-  if (!user || !user.passwordHash) return null;
-  if (user.lockedUntil && user.lockedUntil > new Date()) return null;
-  if (!ok) {
-    await db.recordFailedLogin(user.id, MAX_FAILURES, LOCK_MINUTES);
-    return null;
-  }
-  return user;
-}
-
-// ── Session cookie (signed JWT) ──────────────────────────────────────────────
 export function assertSessionSecret() {
   if (ENV.cookieSecret.length < 32) {
     throw new Error("JWT_SECRET must be set to at least 32 random characters");
@@ -87,7 +28,7 @@ export async function createSessionToken(userId: number): Promise<string> {
     .sign(sessionSecret());
 }
 
-/** Resolves the session cookie to a user row (without the password hash), or null. */
+/** Resolves the session cookie to a user row, or null. */
 export async function authenticateRequest(req: Request) {
   const token = parseCookieHeader(req.headers.cookie ?? "")[COOKIE_NAME];
   if (!token) return null;

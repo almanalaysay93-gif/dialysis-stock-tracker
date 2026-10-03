@@ -44,15 +44,15 @@ export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   /** Stored lowercase; sign-in is case-insensitive. */
   username: varchar("username", { length: 64 }).notNull().unique(),
-  /** Null for accounts that only sign in with Google. */
+  /** Unused since password sign-in was removed; always null. */
   passwordHash: text("passwordHash"),
   /** Set for Google accounts. Stored lowercase. */
   email: varchar("email", { length: 320 }).unique(),
   name: text("name"),
   role: userRole("role").default("user").notNull(),
-  /** Consecutive wrong passwords since the last sign-in or lock. */
+  /** Unused since password sign-in was removed. Kept to avoid a migration. */
   failedLogins: integer("failedLogins").default(0).notNull(),
-  /** Sign-in is refused until this time. Kept in the database so every server instance sees it. */
+  /** Unused since password sign-in was removed. */
   lockedUntil: timestamp("lockedUntil", { withTimezone: true }),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),

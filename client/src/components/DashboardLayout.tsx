@@ -22,22 +22,14 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { Activity, CalendarDays, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft, RotateCcw, ShoppingBag } from "lucide-react";
-import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 
 const LOGO_SRC = "/spmc-skti-logo.jpg";
 
 function LoginScreen() {
-  const utils = trpc.useUtils();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const login = trpc.auth.login.useMutation({
-    onSuccess: () => utils.invalidate(),
-  });
   const options = trpc.auth.options.useQuery(undefined, { retry: false });
   // Google sends the browser back to /?login_error=... when sign-in fails.
   const [googleError] = useState(() => {
@@ -51,17 +43,9 @@ function LoginScreen() {
     if (googleError) window.history.replaceState(null, "", window.location.pathname);
   }, [googleError]);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    login.mutate({ username, password });
-  };
-
   return (
     <main className="flex items-center justify-center min-h-screen p-5">
-      <form
-        onSubmit={handleSubmit}
-        className="glass-strong rounded-xl p-8 max-w-md w-full space-y-6 animate-in-rise"
-      >
+      <div className="glass-strong rounded-xl p-8 max-w-md w-full space-y-6 animate-in-rise">
         <div className="flex flex-col items-center gap-4 text-center">
           <img
             src={LOGO_SRC}
@@ -79,67 +63,23 @@ function LoginScreen() {
             </p>
           </div>
         </div>
-        {options.data?.google && (
-          <>
-            <Button asChild variant="outline" size="lg" className="w-full h-11">
-              <a href="/api/auth/google/start">Sign in with Google</a>
-            </Button>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
-              <span className="h-px flex-1 bg-border" />
-              or use a username
-              <span className="h-px flex-1 bg-border" />
-            </div>
-          </>
-        )}
         {googleError && (
-          <p role="alert" className="text-sm font-medium text-destructive">
+          <p role="alert" className="text-sm font-medium text-destructive text-center">
             {googleError}
           </p>
         )}
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="login-username">Username</Label>
-            <Input
-              id="login-username"
-              name="username"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              autoFocus={!options.data?.google}
-              required
-              className="h-11"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="login-password">Password</Label>
-            <Input
-              id="login-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="h-11"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-        </div>
-        {login.error && (
-          <p role="alert" className="text-sm font-medium text-destructive">
-            {login.error.data?.code === "UNAUTHORIZED"
-              ? login.error.message
-              : "Sign-in is unavailable right now. Check the connection and try again."}
-          </p>
+        {options.data?.google ? (
+          <Button asChild size="lg" className="w-full h-11">
+            <a href="/api/auth/google/start">Sign in with Google</a>
+          </Button>
+        ) : (
+          !options.isLoading && (
+            <p role="alert" className="text-sm text-muted-foreground text-center">
+              Sign-in is not available right now. Ask the unit administrator.
+            </p>
+          )
         )}
-        <Button type="submit" size="lg" className="w-full h-11" disabled={login.isPending}>
-          {login.isPending ? "Signing in…" : "Sign in"}
-        </Button>
-        <p className="text-xs text-muted-foreground text-center">
-          No account yet? Ask the unit administrator to create one.
-        </p>
-      </form>
+      </div>
     </main>
   );
 }

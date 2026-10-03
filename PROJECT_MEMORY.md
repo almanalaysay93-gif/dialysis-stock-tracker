@@ -5,7 +5,7 @@ Unified memory for all agents. Append new entries at the bottom.
 ## 2026-10-03: Platform scaffold removed, rebuilt on Supabase Postgres + local login (Claude)
 
 **User decisions** `[stated]`
-- Login: username + password (local accounts). No third-party auth.
+- Login: was username + password; replaced by Google-only sign-in on 2026-10-03 at the user's request (see Architecture).
 - Database: Supabase Postgres.
 - UI: keep the existing SPMC navy/crimson/teal glass design. No redesign.
 - Git: new commits on top of the existing history. No history rewrite, no force-push.
@@ -15,14 +15,13 @@ Unified memory for all agents. Append new entries at the bottom.
 - Server: Express + tRPC v11. App (no listener) in `server/_core/app.ts`; `server/_core/index.ts` serves it on a port for dev/self-hosting. Auth in `server/_core/auth.ts`.
 - Hosting: Vercel project is linked to this GitHub repo (production = `main`, https://dialysis-stock-tracker.vercel.app). `vercel.json` runs `pnpm build:vercel`; `vercel-build.mjs` writes Build Output API v3 to `.vercel/output` (static client + one bundled CommonJS function `api.func` for `/api/*`).
 - DB: Drizzle ORM, `postgres` (postgres.js) driver, `prepare: false`. Schema `drizzle/schema.ts`, single migration `drizzle/0000_*.sql`.
-- Auth: scrypt hashes (N=2^15, r=8, p=3, params stored in the hash), HS256 JWT in httpOnly SameSite=Lax cookie `app_session_id`, 12 h sessions (`SESSION_MS` in `shared/const.ts`), 5 wrong passwords in a row lock the account for 15 min (`users.failedLogins` / `users.lockedUntil`, so it holds across serverless instances). Wrong password, unknown username and locked username return one identical error.
+- Session: HS256 JWT in httpOnly SameSite=Lax cookie `app_session_id`, 12 h (`SESSION_MS` in `shared/const.ts`).
 - `deductFefo` runs in one transaction with `SELECT ... FOR UPDATE`: an over-issue rolls back, concurrent issues cannot double-deduct.
-- Google sign-in (merged to `main` 2026-10-03): OIDC code flow + PKCE in `server/_core/google.ts`, routes `/api/auth/google/start|callback`. Only addresses in `ADMIN_EMAILS` (user stated: `share@spmcdvo.net`) can sign in this way and become admins; the account row has `email`, no password. Needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from a Google Cloud OAuth web client (user must create; redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback`). Password sign-in kept for other staff. Tested against a fake Google only, not the real one.
+- Sign-in is Google only (user decision 2026-10-03: no username/password). OIDC code flow + PKCE in `server/_core/google.ts`, routes `/api/auth/google/start|callback`. Only addresses in `ADMIN_EMAILS` (user stated: `share@spmcdvo.net`) can sign in and become admins. Needs `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`; redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback`. Password login, lockout and the `user:set` script were removed. Columns `passwordHash`, `failedLogins`, `lockedUntil` remain unused.
 - Every tRPC procedure except `auth.me`, `auth.login`, `auth.logout` requires a session.
 - RLS enabled on all 9 tables, no policies: server connects as table owner; Supabase Data API roles get nothing.
-- Accounts are created with `pnpm user:set <username> "<name>" [admin]` (`set-user.ts`). No self-registration, no user-management UI.
 
-**Env**: `DATABASE_URL` (local: Supabase direct or session pooler, port 5432; Vercel: transaction pooler, port 6543), `JWT_SECRET` (32+ chars, server refuses to run without it), `PORT` (self-hosting only).
+**Env**: `DATABASE_URL` (local: Supabase direct or session pooler, port 5432; Vercel: transaction pooler, port 6543), `JWT_SECRET` (32+ chars, server refuses to run without it), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`, `PORT` (self-hosting only).
 
 **Removed**: the original hosting platform's OAuth client + SDK, its API helpers (LLM, image, voice, maps, data API, heartbeat, notification, storage proxy), its Vite runtime plugin, debug collector, wouter route-collector patch, analytics tag, `template.json`, template demo pages, MySQL migrations, deps `mysql2`, `axios`, `@aws-sdk/*`, `streamdown`.
 

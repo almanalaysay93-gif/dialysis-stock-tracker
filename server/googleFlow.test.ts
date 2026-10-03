@@ -165,12 +165,12 @@ describe.skipIf(!TEST_DB)("Google sign-in flow (real DB, fake Google)", () => {
     expect(cookiesOf(noCookie)).not.toMatch(/app_session_id/);
   });
 
-  it("does not let a Google-only account sign in with a password", async () => {
+  it("has no password sign-in route", async () => {
     const res = await fetch(`${base}/api/trpc/auth.login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ json: { username: ADMIN, password: "anything-at-all-12" } }),
     });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(404);
   });
 });

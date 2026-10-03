@@ -1,8 +1,6 @@
-import { COOKIE_NAME, SESSION_MS } from "@shared/const";
-import { TRPCError } from "@trpc/server";
+import { COOKIE_NAME } from "@shared/const";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { checkCredentials, createSessionToken } from "./_core/auth";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { isGoogleEnabled } from "./_core/google";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -32,26 +30,6 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     options: publicProcedure.query(() => ({ google: isGoogleEnabled() })),
-    login: publicProcedure
-      .input(z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }))
-      .mutation(async ({ input, ctx }) => {
-        const user = await checkCredentials(input.username.trim().toLowerCase(), input.password);
-        if (!user) {
-          // One message for a wrong password, an unknown username and a locked
-          // username, so the reply does not reveal which usernames exist.
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message:
-              "Username or password is incorrect. A username is locked for 15 minutes after 5 failed attempts.",
-          });
-        }
-        await db.recordSignIn(user.id);
-        ctx.res.cookie(COOKIE_NAME, await createSessionToken(user.id), {
-          ...getSessionCookieOptions(ctx.req),
-          maxAge: SESSION_MS,
-        });
-        return { success: true } as const;
-      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

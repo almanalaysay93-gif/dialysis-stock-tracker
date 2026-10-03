@@ -12,35 +12,25 @@ Requires Node 20+ and pnpm.
 pnpm install
 cp .env.example .env        # then fill in DATABASE_URL and JWT_SECRET
 pnpm db:migrate             # creates the tables in your Supabase database
-pnpm user:set admin "Head Nurse" admin   # first account; prompts for a password
 pnpm seed                   # optional: sample items, batches and sessions
 pnpm dev                    # http://localhost:3000
 ```
 
 `DATABASE_URL` comes from the Supabase dashboard under **Connect**. Use the direct connection or the session pooler (port 5432). The direct connection is IPv6 unless the project has the IPv4 add-on; on an IPv4-only network use the session pooler.
 
-## Google sign-in
+## Sign-in
 
-Google sign-in is for admins. Any Google address listed in `ADMIN_EMAILS` (comma-separated, for example `share@spmcdvo.net`) can sign in with it and gets an admin account on first use. Every other Google account is refused, and Google must report the address as verified.
+Sign-in is Google only. Any Google address listed in `ADMIN_EMAILS` (comma-separated, for example `share@spmcdvo.net`) can sign in and gets an admin account on first use. Every other Google account is refused, and Google must report the address as verified. There are no usernames or passwords. Sessions last 12 hours.
+
+To let another person in, add their Google address to `ADMIN_EMAILS` and redeploy. Everyone on the list is an admin.
 
 Setup:
 
 1. Google Cloud Console → **APIs & Services → Credentials → Create credentials → OAuth client ID**, type **Web application**. If asked, configure the consent screen first.
-2. Add the authorized redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local use).
+2. Add the authorized redirect URI `https://dialysis-stock-tracker.vercel.app/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local use). Leave Authorized JavaScript origins empty.
 3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAILS` in `.env` and in Vercel's environment variables, then redeploy.
-4. Run `pnpm db:migrate` against the Supabase database (this branch adds an `email` column).
 
-The "Sign in with Google" button appears only when the client ID and secret are set. If the consent screen is set to "Internal" (Google Workspace only), the admin address must belong to that Workspace.
-
-## Accounts
-
-Username and password sign-in also works, for staff who do not use Google. There is no self-registration.
-
-- Add a user: `pnpm user:set <username> "<display name>"`
-- Add an admin: `pnpm user:set <username> "<display name>" admin`
-- Reset a password: run `pnpm user:set <username>` again for an existing username
-
-Passwords need 12 or more characters and are stored as scrypt hashes. A username is locked for 15 minutes after 5 failed attempts. Sessions last 12 hours.
+If the consent screen is set to Internal (Google Workspace only), the admin address must belong to that Workspace.
 
 ## Scripts
 
@@ -66,10 +56,11 @@ The repo is set up for Vercel: `vercel.json` runs `pnpm build:vercel`, which bui
 1. In the Vercel project, open **Settings → Environment Variables** and add:
    - `DATABASE_URL`: the Supabase **transaction pooler** string (port 6543). Supabase recommends this mode for serverless functions.
    - `JWT_SECRET`: 32 or more random characters.
-2. From your own machine, with `.env` pointing at the same Supabase database through the direct connection or session pooler (port 5432), run `pnpm db:migrate` and `pnpm user:set <username> "<name>" admin`. Vercel does not run migrations.
-3. Redeploy so the function picks up the variables.
+2. Add the Google variables from the Sign-in section.
+3. From your own machine, with `.env` pointing at the same Supabase database through the direct connection or session pooler (port 5432), run `pnpm db:migrate`. Vercel does not run migrations.
+4. Redeploy so the function picks up the variables.
 
-Without the two variables the page loads but every sign-in fails.
+Without the variables the page loads but sign-in fails.
 
 ## Deploying elsewhere
 
