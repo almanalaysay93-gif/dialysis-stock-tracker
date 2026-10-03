@@ -42,3 +42,4 @@ Unified memory for all agents. Append new entries at the bottom.
 - Production health check returned `unreachable` / `ENOTFOUND`: the host in Vercel's `DATABASE_URL` does not resolve from Vercel. Most likely the Supabase Direct connection string (IPv6-only) was used; Vercel needs the Transaction pooler string (port 6543). Only the user can change it (no agent has Vercel access).
 - An earlier on-screen hint blamed a missing migration; that was a guess and it was wrong. The sign-in screen now names the actual database state.
 - No migration has reached the production database yet. Once `DATABASE_URL` is correct, the next production deploy applies them automatically.
+- Resolved 2026-10-03 05:2x UTC: user corrected `DATABASE_URL` in Vercel; redeploy `99a8da1` ran the migrations in the build and the health check returns `ok`. Google sign-in by the user not yet confirmed.
