@@ -19,7 +19,7 @@
 
   --color-card: oklch(0.99 0.005 240 / 0.72);          /* glass surface */
   --color-card-foreground: oklch(0.24 0.05 265);
-  --color-popover: oklch(0.99 0.005 240 / 0.85);
+  --color-popover: oklch(0.992 0.004 240);
   --color-popover-foreground: oklch(0.24 0.05 265);
 
   --color-primary: oklch(0.38 0.13 268);               /* SPMC navy */
@@ -142,6 +142,21 @@
     box-shadow:
       0 12px 36px oklch(0.3 0.08 260 / 0.13),
       inset 0 1px 0 oklch(1 0 240 / 0.75);
+  }
+
+  /* Menus, selects and dialogs sit on top of text: opaque enough that nothing behind shows through. */
+  .surface-popover {
+    background: oklch(0.992 0.004 240);
+    border: 1px solid oklch(0.38 0.13 268 / 0.16);
+    box-shadow: 0 12px 32px oklch(0.3 0.08 260 / 0.18);
+  }
+
+  .surface-dialog {
+    background: oklch(0.992 0.004 240 / 0.97);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid oklch(0.99 0.006 240 / 0.7);
+    box-shadow: 0 12px 36px oklch(0.3 0.08 260 / 0.13), inset 0 1px 0 oklch(1 0 240 / 0.75);
   }
 
   .glass-dark {
