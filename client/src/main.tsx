@@ -6,9 +6,15 @@ import { getQueryKey } from "@trpc/react-query";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
+import { preloadPage } from "./lib/pages";
 import "./index.css";
 
-const queryClient = new QueryClient();
+// Reuse recent data on navigation while still refreshing on window focus.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 15_000 } },
+});
+// Fetch the requested page's code alongside authentication, not afterwards.
+preloadPage(window.location.pathname);
 
 // A session that expired mid-use: clear the cached user so the layout swaps
 // back to the sign-in screen.

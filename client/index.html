@@ -9,11 +9,12 @@
     <title>Dialysis Stock Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Fraunces:wght@400;500;600&display=swap" rel="stylesheet" /></noscript>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root"><div role="status" aria-label="Loading Dialysis Stock Tracker" style="min-height:100vh;display:grid;place-content:center;background:#edf2f7;color:#243454;font:500 18px system-ui">Dialysis Stock Tracker</div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 

@@ -43,3 +43,12 @@ Unified memory for all agents. Append new entries at the bottom.
 - An earlier on-screen hint blamed a missing migration; that was a guess and it was wrong. The sign-in screen now names the actual database state.
 - No migration has reached the production database yet. Once `DATABASE_URL` is correct, the next production deploy applies them automatically.
 - Resolved 2026-10-03 05:2x UTC: user corrected `DATABASE_URL` in Vercel; redeploy `99a8da1` ran the migrations in the build and the health check returns `ok`. Google sign-in by the user not yet confirmed.
+
+## 2026-10-03: Loading performance improvements (Codex)
+- [stated] User requested fast, immediate loading for the production transactions page.
+- Implemented lazy page imports, current-route preloading alongside authentication, and sidebar hover/focus/touch preloading. Reports/chart code no longer downloads on transactions.
+- Entry JavaScript: 290.72 KB gzip before, 152.45 KB after (48% reduction). Transactions and shared chunks add about 20 KB gzip.
+- Sign-in options now batch with the first auth request. Session cache: 60 seconds. Data cache: 15 seconds, existing mutation invalidation retained. Logout clears query cache.
+- Fonts load without blocking initial rendering. HTML includes an immediate loading shell.
+- Verified: TypeScript check, Vite production build, Vercel output assembly, 30 unit tests passed. 12 real-DB tests skipped without a test database. Browser-harness confirmed transactions renders with mock authenticated API data and does not download Reports.
+- Production unchanged. Deployment approval requested and pending.

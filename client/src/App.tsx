@@ -5,19 +5,13 @@ import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import CalendarPage from "./pages/Calendar";
-import PurchaseOrders from "./pages/PurchaseOrders";
-import Rotation from "./pages/Rotation";
-import Consumption from "./pages/Consumption";
-import Dashboard from "./pages/Dashboard";
-import Items from "./pages/Items";
-import Reports from "./pages/Reports";
-import Sessions from "./pages/Sessions";
-import Transactions from "./pages/Transactions";
+import { Suspense } from "react";
+import { CalendarPage, PurchaseOrders, Rotation, Consumption, Dashboard, Items, Reports, Sessions, Transactions } from "./lib/pages";
 
 function Router() {
   return (
     <DashboardLayout>
+      <Suspense fallback={<div role="status" aria-label="Loading page" className="animate-pulse space-y-4"><div className="h-8 w-48 rounded bg-muted" /><div className="h-64 rounded-xl bg-muted" /></div>}>
       <Switch>
         <Route path={"/"} component={Dashboard} />
         <Route path={"/items"} component={Items} />
@@ -31,6 +25,7 @@ function Router() {
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>
+      </Suspense>
     </DashboardLayout>
   );
 }

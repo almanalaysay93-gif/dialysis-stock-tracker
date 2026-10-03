@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
+import { preloadPage } from "@/lib/pages";
 import { Activity, CalendarDays, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft, RotateCcw, ShoppingBag } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -29,8 +30,7 @@ import { Button } from "./ui/button";
 
 const LOGO_SRC = "/spmc-skti-logo.jpg";
 
-function LoginScreen() {
-  const options = trpc.auth.options.useQuery(undefined, { retry: false });
+function LoginScreen({ google, optionsLoading }: { google: boolean; optionsLoading: boolean }) {
   // Google sends the browser back to /?login_error=... when sign-in fails.
   const [googleError] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -80,12 +80,12 @@ function LoginScreen() {
             {googleError}
           </p>
         )}
-        {options.data?.google ? (
+        {google ? (
           <Button asChild size="lg" className="w-full h-11">
             <a href="/api/auth/google/start">Sign in with Google</a>
           </Button>
         ) : (
-          !options.isLoading && (
+          !optionsLoading && (
             <p role="alert" className="text-sm text-muted-foreground text-center">
               Sign-in is not available right now. Ask the unit administrator.
             </p>
@@ -123,6 +123,8 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  // Batch sign-in configuration with the initial session request.
+  const options = trpc.auth.options.useQuery(undefined, { retry: false, staleTime: Infinity });
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -133,7 +135,7 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return <LoginScreen />;
+    return <LoginScreen google={Boolean(options.data?.google)} optionsLoading={options.isLoading} />;
   }
 
   return (
@@ -252,6 +254,9 @@ function DashboardLayoutContent({
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
+                      onMouseEnter={() => preloadPage(item.path)}
+                      onFocus={() => preloadPage(item.path)}
+                      onTouchStart={() => preloadPage(item.path)}
                       tooltip={item.label}
                       className={`h-12 transition-all font-normal text-[15px]`}
                     >
