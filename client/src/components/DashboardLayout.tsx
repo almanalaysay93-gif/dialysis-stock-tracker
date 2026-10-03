@@ -33,11 +33,17 @@ function LoginScreen() {
   const options = trpc.auth.options.useQuery(undefined, { retry: false });
   // Google sends the browser back to /?login_error=... when sign-in fails.
   const [googleError] = useState(() => {
-    const code = new URLSearchParams(window.location.search).get("login_error");
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("login_error");
     if (!code) return null;
-    return code === "not_allowed"
-      ? "That Google account is not allowed to sign in."
-      : "Google sign-in did not complete. Try again.";
+    if (code === "not_allowed") return "That Google account is not allowed to sign in.";
+    const detail: Record<string, string> = {
+      exchange: "Google rejected the request. The client secret may be wrong.",
+      verify: "Google's reply could not be verified, or the email is not verified.",
+      database: "The database is not ready. The latest migration may not be applied.",
+    };
+    const reason = detail[params.get("step") ?? ""];
+    return `Google sign-in did not complete.${reason ? ` ${reason}` : ""} Try again.`;
   });
   useEffect(() => {
     if (googleError) window.history.replaceState(null, "", window.location.pathname);

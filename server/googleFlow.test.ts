@@ -20,6 +20,7 @@ describe.skipIf(!TEST_DB)("Google sign-in flow (real DB, fake Google)", () => {
   // What the fake token endpoint will sign for the next code exchange.
   let tokenFor: { email: string; verified?: boolean } = { email: ADMIN };
   let lastNonce = "";
+  let tokenEndpointFails = false;
   const realFetch = globalThis.fetch;
 
   beforeAll(async () => {
@@ -37,6 +38,7 @@ describe.skipIf(!TEST_DB)("Google sign-in flow (real DB, fake Google)", () => {
         return new Response(JSON.stringify({ keys: [jwk] }), { headers: { "content-type": "application/json" } });
       }
       if (url === "https://oauth2.googleapis.com/token") {
+        if (tokenEndpointFails) return new Response("{}", { status: 401 });
         const form = new URLSearchParams(String(init?.body));
         expect(form.get("client_id")).toBe(CLIENT_ID);
         expect(form.get("grant_type")).toBe("authorization_code");
@@ -145,8 +147,23 @@ describe.skipIf(!TEST_DB)("Google sign-in flow (real DB, fake Google)", () => {
       redirect: "manual",
       headers: { cookie },
     });
-    expect(res.headers.get("location")).toBe("/?login_error=google");
+    expect(res.headers.get("location")).toBe("/?login_error=google&step=verify");
     expect(cookiesOf(res)).not.toMatch(/app_session_id/);
+  });
+
+  it("names the failed stage when Google rejects the code exchange", async () => {
+    tokenEndpointFails = true;
+    try {
+      const { state, cookie } = await start();
+      const res = await fetch(`${base}/api/auth/google/callback?code=abc&state=${state}`, {
+        redirect: "manual",
+        headers: { cookie },
+      });
+      expect(res.headers.get("location")).toBe("/?login_error=google&step=exchange");
+      expect(cookiesOf(res)).not.toMatch(/app_session_id/);
+    } finally {
+      tokenEndpointFails = false;
+    }
   });
 
   it("refuses a callback whose state does not match, or that has no state cookie", async () => {

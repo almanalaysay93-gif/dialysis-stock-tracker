@@ -134,13 +134,19 @@ googleRouter.get("/callback", async (req, res) => {
   if (!isGoogleEnabled() || !flow || typeof code !== "string" || state !== flow.state) {
     return res.redirect(302, "/?login_error=google");
   }
+  // Which stage failed, shown on the sign-in screen so a misconfiguration can be
+  // told apart without server logs: exchange = Google's token endpoint,
+  // verify = the ID token, database = our own tables.
+  let step = "exchange";
   try {
     const idToken = await exchangeCode(code, flow.verifier, redirectUriFor(req));
+    step = "verify";
     const { email, name } = await verifyIdToken(idToken, {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       nonce: flow.nonce,
     });
     if (!isAdminEmail(email)) return res.redirect(302, "/?login_error=not_allowed");
+    step = "database";
     const user = await db.upsertGoogleAdmin(email, name);
     await db.recordSignIn(user.id);
     res.cookie(COOKIE_NAME, await createSessionToken(user.id), {
@@ -149,7 +155,7 @@ googleRouter.get("/callback", async (req, res) => {
     });
     res.redirect(302, "/");
   } catch (error) {
-    console.error("[Google sign-in] failed:", error instanceof Error ? error.message : error);
-    res.redirect(302, "/?login_error=google");
+    console.error(`[Google sign-in] failed at ${step}:`, error instanceof Error ? error.message : error);
+    res.redirect(302, `/?login_error=google&step=${step}`);
   }
 });
