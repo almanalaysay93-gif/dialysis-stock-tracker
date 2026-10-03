@@ -28,10 +28,10 @@ Unified memory for all agents. Append new entries at the bottom.
 **Verified 2026-10-03** against a throwaway local Postgres (not Supabase): type-check clean, 26/26 vitest incl. real-DB FEFO/FIFO/lock tests, production build, all tRPC reads/writes over HTTP, browser walk-through of sign-in and all 9 pages at 1440 px, sign-in and dashboard at 390 px. Independent review of the auth + Postgres diff: 2 findings, both fixed. The Vercel function bundle was run standalone (no node_modules) behind a local stand-in for Vercel routing: static files, SPA fallback, tRPC and lockout all work. Not yet observed on Vercel itself.
 
 **Not done / open**
-- Before this work, production on Vercel served the server bundle source at `/` and 404 for `/api/*` (Express does not run there unadapted). The fix is on the branch, not on `main`.
+- Before this work, production on Vercel served the server bundle source at `/` and 404 for `/api/*` (Express does not run there unadapted). Fixed by the Vercel build above.
 - Vercel env vars `DATABASE_URL` and `JWT_SECRET` are not set by any agent; user must add them.
 - Never run against a real Supabase project. No data migrated from the old platform-hosted MySQL database.
-- Not deployed. Work is on branch `supabase-postgres-local-login`; not merged into `main`.
+- Merged into `main` on 2026-10-03 (fast-forward from `supabase-postgres-local-login`), which triggers the Vercel production deploy. Sign-in on production fails until the env vars, migration and first account exist.
 - Git history still shows the 6 original commits under the previous platform's author identity (user chose to keep history).
 - `todo.md` is the original build checklist; left in place.
 - Known pre-existing issues left untouched: single 290 KB gz JS chunk, `maximum-scale=1` in the viewport meta, 50 MB JSON body limit in `server/_core/index.ts`.
