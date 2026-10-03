@@ -1,12 +1,13 @@
 // Seed realistic dialysis consumables inventory data. Run once: node seed.mjs
 import "dotenv/config";
-import mysql from "mysql2/promise";
+import postgres from "postgres";
 
-const conn = await mysql.createConnection(process.env.DATABASE_URL);
+const sql = postgres(process.env.DATABASE_URL, { prepare: false });
 
-const [existing] = await conn.query("SELECT COUNT(*) AS c FROM items");
-if (existing[0].c > 0) {
+const [existing] = await sql`SELECT COUNT(*)::int AS c FROM items`;
+if (existing.c > 0) {
   console.log("Database already seeded — skipping.");
+  await sql.end();
   process.exit(0);
 }
 
@@ -40,14 +41,11 @@ const items = [
   ["PD Transfer Set", "PD supplies", "unit", 8, 15, "Transfer set for cycler PD, replaced every 6 months"],
   ["PD Drain Bag 4 L", "PD supplies", "unit", 20, 40, "4 L overnight drain collection bag"],
 ];
-for (const [name, category, uom, minL, reorder, desc] of items) {
-  await conn.execute(
-    "INSERT INTO items (name, category, unitOfMeasure, minStockLevel, reorderLevel, description) VALUES (?,?,?,?,?,?)",
-    [name, category, uom, minL, reorder, desc]
-  );
+for (const [name, category, unitOfMeasure, minStockLevel, reorderLevel, description] of items) {
+  await sql`INSERT INTO items ${sql({ name, category, unitOfMeasure, minStockLevel, reorderLevel, description })}`;
 }
 
-const [itemRows] = await conn.query("SELECT id, name FROM items ORDER BY id");
+const itemRows = await sql`SELECT id, name FROM items ORDER BY id`;
 const byName = Object.fromEntries(itemRows.map((r) => [r.name, r.id]));
 
 const today = new Date();
@@ -96,14 +94,11 @@ const batches = [
   [byName["PD Transfer Set"], "LOT-PDTS-2501", "Baxter", 20, 9, d(200), false],
   [byName["PD Drain Bag 4 L"], "LOT-PDDB-2412", "Baxter", 45, 21, d(140), false],
 ];
-for (const b of batches) {
-  await conn.execute(
-    "INSERT INTO batches (itemId, lotNumber, supplier, quantityReceived, quantityOnHand, expiryDate, isQuarantined) VALUES (?,?,?,?,?,?,?)",
-    b
-  );
+for (const [itemId, lotNumber, supplier, quantityReceived, quantityOnHand, expiryDate, isQuarantined] of batches) {
+  await sql`INSERT INTO batches ${sql({ itemId, lotNumber, supplier, quantityReceived, quantityOnHand, expiryDate, isQuarantined })}`;
 }
 
-const [batchRows] = await conn.query("SELECT id, itemId, lotNumber FROM batches ORDER BY id");
+const batchRows = await sql`SELECT id, "itemId", "lotNumber" FROM batches ORDER BY id`;
 const batchByItem = {};
 for (const b of batchRows) {
   batchByItem[b.itemId] = batchByItem[b.itemId] || [];
@@ -150,21 +145,27 @@ const txItems = [
   byName["Sterile Gauze 4x4 (Pack/100)"],
 ];
 for (let i = 0; i < txns.length; i++) {
-  const [type, reason, qty, supplier, lot, expiry, notes] = txns[i];
+  const [type, reason, quantity, supplier, lotNumber, expiryDate, notes] = txns[i];
   const itemId = txItems[i];
-  let batchId = null,
-    lotNo = lot,
-    exp = expiry;
-  if (lot) {
-    const match = batchRows.find((b) => b.itemId === itemId && b.lotNumber === lot);
+  let batchId = null;
+  if (lotNumber) {
+    const match = batchRows.find((b) => b.itemId === itemId && b.lotNumber === lotNumber);
     if (match) batchId = match.id;
   }
-  const ts = new Date(Date.now() - (txns.length - i) * 2 * 3600 * 1000);
-  await conn.execute(
-    `INSERT INTO stock_transactions (itemId, batchId, type, reason, quantity, supplier, lotNumber, expiryDate, notes, performedBy, performedAt)
-     VALUES (?,?,?,?,?,?,?,?,?,'Nurse A. Rivera', ?)`,
-    [itemId, batchId, type, reason, qty, supplier, lotNo, exp, notes, ts]
-  );
+  const performedAt = new Date(Date.now() - (txns.length - i) * 2 * 3600 * 1000);
+  await sql`INSERT INTO stock_transactions ${sql({
+    itemId,
+    batchId,
+    type,
+    reason,
+    quantity,
+    supplier,
+    lotNumber,
+    expiryDate,
+    notes,
+    performedBy: "Nurse A. Rivera",
+    performedAt,
+  })}`;
 }
 
 // ── Consumption templates ────────────────────────────────────────────────────
@@ -189,17 +190,10 @@ const pdTemplates = [
   ["Chlorhexidine Prep Swabs", 2, "Exit-site antisepsis"],
   ["Nitrile Exam Gloves (Box/100)", 1, "Gloves"],
 ];
-for (const [name, qty, label] of hdTemplates) {
-  await conn.execute(
-    "INSERT INTO consumption_templates (sessionType, itemId, defaultQty, label) VALUES ('HD', ?, ?, ?)",
-    [byName[name], qty, label]
-  );
-}
-for (const [name, qty, label] of pdTemplates) {
-  await conn.execute(
-    "INSERT INTO consumption_templates (sessionType, itemId, defaultQty, label) VALUES ('PD', ?, ?, ?)",
-    [byName[name], qty, label]
-  );
+for (const [sessionType, templates] of [["HD", hdTemplates], ["PD", pdTemplates]]) {
+  for (const [name, defaultQty, label] of templates) {
+    await sql`INSERT INTO consumption_templates ${sql({ sessionType, itemId: byName[name], defaultQty, label })}`;
+  }
 }
 
 // ── Recent treatment sessions with consumables ───────────────────────────────
@@ -214,22 +208,23 @@ const sessions = [
   ["Patient D. Ibrahim", "12", "evening", "HD", -1],
   ["Patient F. Garcia", "6", "afternoon", "PD", -1],
 ];
-for (const [patient, chair, shift, type, dayOffset] of sessions) {
-  const [res] = await conn.execute(
-    "INSERT INTO treatment_sessions (patientName, chair, shift, sessionType, sessionDate, status, createdBy) VALUES (?,?,?,?,?,?,?)",
-    [patient, chair, shift, type, d(dayOffset), "completed", "Nurse A. Rivera"]
-  );
-  const sessionId = res.insertId;
-  const templates = type === "HD" ? hdTemplates : pdTemplates;
-  for (const [name, qty] of templates) {
+for (const [patientName, chair, shift, sessionType, dayOffset] of sessions) {
+  const [{ id: sessionId }] = await sql`INSERT INTO treatment_sessions ${sql({
+    patientName,
+    chair,
+    shift,
+    sessionType,
+    sessionDate: d(dayOffset),
+    status: "completed",
+    createdBy: "Nurse A. Rivera",
+  })} RETURNING id`;
+  const templates = sessionType === "HD" ? hdTemplates : pdTemplates;
+  for (const [name, quantity] of templates) {
     const itemId = byName[name];
     const b = batchByItem[itemId] && batchByItem[itemId][0];
-    await conn.execute(
-      "INSERT INTO session_consumables (sessionId, itemId, batchId, quantity) VALUES (?,?,?,?)",
-      [sessionId, itemId, b ? b.id : null, qty]
-    );
+    await sql`INSERT INTO session_consumables ${sql({ sessionId, itemId, batchId: b ? b.id : null, quantity })}`;
   }
 }
 
-await conn.end();
+await sql.end();
 console.log("Seed completed successfully.");

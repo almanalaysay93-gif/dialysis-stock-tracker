@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { and, desc, eq, getTableColumns, gt, inArray, like } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -9,7 +9,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // prepare: false keeps the client compatible with Supabase's transaction
+      // pooler (port 6543), which does not support prepared statements.
+      _db = drizzle(postgres(process.env.DATABASE_URL, { prepare: false }));
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -18,78 +20,42 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
+// ── Users ────────────────────────────────────────────────────────────────────
+const { passwordHash: _passwordHash, ...publicUserColumns } = getTableColumns(users);
 
+/** Full row including the password hash. Only for credential checks. */
+export async function getUserByUsername(username: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  if (!db) return undefined;
+  const rows = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  return rows[0];
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserById(id: number) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  if (!db) return undefined;
+  const rows = await db.select(publicUserColumns).from(users).where(eq(users.id, id)).limit(1);
+  return rows[0];
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function createUser(data: InsertUser) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [row] = await db.insert(users).values(data).returning(publicUserColumns);
+  return row;
+}
+
+export async function setUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+}
+
+export async function touchLastSignedIn(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inventory feature queries
@@ -103,9 +69,10 @@ import {
   treatmentSessions,
 } from "../drizzle/schema";
 
-export async function listItems() {
+export async function listItems(includeInactive = false) {
   const db = await getDb();
   if (!db) return [];
+  if (includeInactive) return db.select().from(items).orderBy(items.name);
   return db.select().from(items).where(eq(items.isActive, true)).orderBy(items.name);
 }
 
@@ -119,9 +86,8 @@ export async function getItemById(id: number) {
 export async function createItem(data: typeof items.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(items).values(data);
-  const rows = await db.select().from(items).where(eq(items.name, data.name!)).limit(1);
-  return rows[0];
+  const [row] = await db.insert(items).values(data).returning();
+  return row;
 }
 
 export async function updateItem(id: number, data: Partial<typeof items.$inferInsert>) {
@@ -163,9 +129,8 @@ export async function getBatchesByItem(itemId: number) {
 export async function createBatch(data: typeof batches.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(batches).values(data);
-  const rows = await db.select().from(batches).orderBy(desc(batches.id)).limit(1);
-  return rows[0];
+  const [row] = await db.insert(batches).values(data).returning();
+  return row;
 }
 
 // ── Stock transactions ───────────────────────────────────────────────────────
@@ -178,9 +143,8 @@ export async function listTransactions(limit = 500) {
 export async function createTransaction(data: typeof stockTransactions.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(stockTransactions).values(data);
-  const rows = await db.select().from(stockTransactions).orderBy(desc(stockTransactions.id)).limit(1);
-  return rows[0];
+  const [row] = await db.insert(stockTransactions).values(data).returning();
+  return row;
 }
 
 // Deducts qty from FEFO batches (earliest expiry first) for an item.
@@ -188,22 +152,28 @@ export async function createTransaction(data: typeof stockTransactions.$inferIns
 export async function deductFefo(itemId: number, qty: number) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const available = await db
-    .select()
-    .from(batches)
-    .where(and(eq(batches.itemId, itemId), eq(batches.isQuarantined, false), gt(batches.quantityOnHand, 0)))
-    .orderBy(batches.expiryDate);
-  const deductions: { batchId: number; qty: number }[] = [];
-  let remaining = qty;
-  for (const batch of available) {
-    if (remaining <= 0) break;
-    const take = Math.min(batch.quantityOnHand, remaining);
-    deductions.push({ batchId: batch.id, qty: take });
-    remaining -= take;
-    await db.update(batches).set({ quantityOnHand: batch.quantityOnHand - take }).where(eq(batches.id, batch.id));
-  }
-  if (remaining > 0) throw new Error(`Insufficient stock for item ${itemId}: need ${qty}, available ${qty - remaining}`);
-  return deductions;
+  // One transaction with row locks: asking for more than is on hand rolls back
+  // instead of leaving the batches emptied, and two concurrent issues cannot
+  // both deduct from the same stale quantity.
+  return db.transaction(async (tx) => {
+    const available = await tx
+      .select()
+      .from(batches)
+      .where(and(eq(batches.itemId, itemId), eq(batches.isQuarantined, false), gt(batches.quantityOnHand, 0)))
+      .orderBy(batches.expiryDate)
+      .for("update");
+    const deductions: { batchId: number; qty: number }[] = [];
+    let remaining = qty;
+    for (const batch of available) {
+      if (remaining <= 0) break;
+      const take = Math.min(batch.quantityOnHand, remaining);
+      deductions.push({ batchId: batch.id, qty: take });
+      remaining -= take;
+      await tx.update(batches).set({ quantityOnHand: batch.quantityOnHand - take }).where(eq(batches.id, batch.id));
+    }
+    if (remaining > 0) throw new Error(`Insufficient stock for item ${itemId}: need ${qty}, available ${qty - remaining}`);
+    return deductions;
+  });
 }
 
 
@@ -237,9 +207,8 @@ export async function listTemplates(sessionType?: "HD" | "PD") {
 export async function createTemplate(data: typeof consumptionTemplates.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(consumptionTemplates).values(data);
-  const rows = await db.select().from(consumptionTemplates).orderBy(desc(consumptionTemplates.id)).limit(1);
-  return rows[0];
+  const [row] = await db.insert(consumptionTemplates).values(data).returning();
+  return row;
 }
 
 export async function deleteTemplate(id: number) {
@@ -294,9 +263,8 @@ export async function getSessionById(id: number) {
 export async function createSession(data: typeof treatmentSessions.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(treatmentSessions).values(data);
-  const rows = await db.select().from(treatmentSessions).orderBy(desc(treatmentSessions.id)).limit(1);
-  return rows[0];
+  const [row] = await db.insert(treatmentSessions).values(data).returning();
+  return row;
 }
 
 export async function completeSession(id: number) {
@@ -369,8 +337,7 @@ export async function createPurchaseOrder(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [insertResult] = await db.insert(purchaseOrders).values(data);
-  const poId = insertResult.insertId;
+  const [{ id: poId }] = await db.insert(purchaseOrders).values(data).returning({ id: purchaseOrders.id });
   if (lines.length > 0) {
     await db.insert(purchaseOrderLines).values(lines.map((l) => ({ poId, ...l, quantityReceived: 0 })));
   }
@@ -413,7 +380,7 @@ export async function nextPoNumber() {
   const rows = await db
     .select({ poNumber: purchaseOrders.poNumber })
     .from(purchaseOrders)
-    .where(sql`purchase_orders.poNumber LIKE ${`${prefix}%`}`);
+    .where(like(purchaseOrders.poNumber, `${prefix}%`));
   const nums = rows
     .map((r) => Number(r.poNumber.slice(prefix.length)))
     .filter((n) => !Number.isNaN(n));

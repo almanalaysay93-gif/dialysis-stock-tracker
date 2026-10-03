@@ -12,6 +12,7 @@ const mockCreateSessionConsumables = vi.fn();
 const mockCompleteSession = vi.fn();
 const mockListSessions = vi.fn();
 const mockGetSessionConsumables = vi.fn();
+const mockGetSessionConsumablesByIds = vi.fn();
 
 const mockListTemplates = vi.fn();
 const mockListBatches = vi.fn();
@@ -47,9 +48,8 @@ vi.mock("./db", () => ({
   completeSession: (...args: unknown[]) => mockCompleteSession(...args),
   deleteSession: (...args: unknown[]) => mockDeleteSession(...args),
   getSessionConsumables: (...args: unknown[]) => mockGetSessionConsumables(...args),
+  getSessionConsumablesByIds: (...args: unknown[]) => mockGetSessionConsumablesByIds(...args),
   createSessionConsumables: (...args: unknown[]) => mockCreateSessionConsumables(...args),
-  upsertUser: async () => {},
-  getUserByOpenId: async () => undefined,
 }));
 
 type CookieCall = { name: string; options: Record<string, unknown> };
@@ -60,10 +60,8 @@ function ctx(overrides: Partial<AuthenticatedUser> = {}): TrpcContext {
   return {
     user: {
       id: 1,
-      openId: "test-user",
-      email: "test@example.com",
+      username: "test-user",
       name: "Nurse Test",
-      loginMethod: "manus",
       role: "admin",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -101,7 +99,7 @@ describe("transactions.stockIn", () => {
   });
 
   it("rejects stock-in for anonymous users", async () => {
-    const caller = appRouter.createCaller({ ...ctx({ openId: "anon" }), user: null } as TrpcContext);
+    const caller = appRouter.createCaller({ ...ctx(), user: null } as TrpcContext);
     await expect(
       caller.transactions.stockIn({
         itemId: 3,
@@ -200,7 +198,7 @@ describe("stock.totals", () => {
         supplier: "X",
         quantityReceived: 20,
         quantityOnHand: 15,
-        expiryDate: "2026-08-30", // within 30 days
+        expiryDate: new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10), // within 30 days
         isQuarantined: false,
       },
     ] as never);
@@ -210,6 +208,27 @@ describe("stock.totals", () => {
 
     expect(totals[0].isLowStock).toBe(true);
     expect(totals[0].expiring30Qty).toBe(15);
+  });
+});
+
+describe("reports.consumption", () => {
+  it("still reports consumption of an item that was later deleted", async () => {
+    mockListSessions.mockResolvedValueOnce([{ id: 1, sessionDate: "2026-10-02", shift: "morning" }] as never);
+    // listItems(true) includes inactive items; the deleted one must still resolve.
+    mockListItems.mockImplementationOnce(async (includeInactive?: boolean) =>
+      includeInactive
+        ? [{ id: 9, name: "Deleted Saline", category: "saline", unitOfMeasure: "bag", isActive: false }]
+        : []
+    );
+    mockGetSessionConsumablesByIds.mockResolvedValueOnce([{ sessionId: 1, itemId: 9, quantity: 3 }] as never);
+
+    const report = await appRouter
+      .createCaller(ctx())
+      .reports.consumption({ startDate: "2026-10-01", endDate: "2026-10-31" });
+
+    expect(report.perItem).toHaveLength(1);
+    expect(report.perItem[0].item.name).toBe("Deleted Saline");
+    expect(report.perCategory[0]).toMatchObject({ category: "saline", qty: 3 });
   });
 });
 

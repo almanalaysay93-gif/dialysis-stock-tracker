@@ -7,14 +7,15 @@ import { getDb } from "./db";
 
 const TEST_DB = process.env.DATABASE_URL;
 
+// Expiry dates relative to today, so the assertions hold whenever the suite runs.
+const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
 function createAdminContext(): TrpcContext {
   return {
     user: {
       id: 1,
-      openId: "test-open-id",
+      username: "test-admin",
       name: "Test Admin",
-      email: "admin@test.com",
-      loginMethod: "google",
       role: "admin",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -45,12 +46,12 @@ describe.skipIf(!TEST_DB)("rotation.list — FIFO ordering (real DB)", () => {
       lotNumber: "ROT-A-OLDEST",
       quantityReceived: 50,
       quantityOnHand: 50,
-      expiryDate: "2027-01-01",
+      expiryDate: inDays(200),
       isQuarantined: false,
     });
     const oldest = await db.select({ id: batches.id }).from(batches).where(eq(batches.lotNumber, "ROT-A-OLDEST")).limit(1);
     batchIds.push(oldest[0].id);
-    await db.update(batches).set({ createdAt: sql`NOW() - INTERVAL 1 DAY` }).where(eq(batches.id, oldest[0].id));
+    await db.update(batches).set({ createdAt: sql`NOW() - INTERVAL '1 day'` }).where(eq(batches.id, oldest[0].id));
 
     // Batch B: newest (created now), earlier expiry
     await db.insert(batches).values({
@@ -58,7 +59,7 @@ describe.skipIf(!TEST_DB)("rotation.list — FIFO ordering (real DB)", () => {
       lotNumber: "ROT-B-NEWEST",
       quantityReceived: 30,
       quantityOnHand: 30,
-      expiryDate: "2026-12-15",
+      expiryDate: inDays(150),
       isQuarantined: false,
     });
     const newest = await db.select({ id: batches.id, createdAt: batches.createdAt }).from(batches).where(eq(batches.lotNumber, "ROT-B-NEWEST")).limit(1);
@@ -70,7 +71,7 @@ describe.skipIf(!TEST_DB)("rotation.list — FIFO ordering (real DB)", () => {
       lotNumber: "ROT-C-SAMEDAY",
       quantityReceived: 10,
       quantityOnHand: 10,
-      expiryDate: "2027-06-01",
+      expiryDate: inDays(300),
       isQuarantined: false,
     });
     const sameDay = await db.select({ id: batches.id }).from(batches).where(eq(batches.lotNumber, "ROT-C-SAMEDAY")).limit(1);
@@ -93,7 +94,7 @@ describe.skipIf(!TEST_DB)("rotation.list — FIFO ordering (real DB)", () => {
     const b = active.find((r) => r.lotNumber === "ROT-B-NEWEST")!;
     const c = active.find((r) => r.lotNumber === "ROT-C-SAMEDAY")!;
     expect(active.indexOf(a)).toBeLessThan(active.indexOf(b));
-    // Same-day tie-break: B (expires 2026-12-15) before C (expires 2027-06-01)
+    // Same-day tie-break: B (expires in 150 days) before C (expires in 300 days)
     expect(active.indexOf(b)).toBeLessThan(active.indexOf(c));
   });
 

@@ -1,8 +1,9 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, SESSION_MS } from "@shared/const";
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { checkCredentials, createSessionToken } from "./_core/auth";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { batches } from "../drizzle/schema";
@@ -27,9 +28,28 @@ function daysBetween(a: string, b: string): number {
 const sessionTypeEnum = z.enum(["HD", "PD"]);
 
 export const appRouter = router({
-  system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    login: publicProcedure
+      .input(z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(256) }))
+      .mutation(async ({ input, ctx }) => {
+        const user = await checkCredentials(input.username.trim().toLowerCase(), input.password);
+        if (!user) {
+          // One message for a wrong password, an unknown username and a locked
+          // username, so the reply does not reveal which usernames exist.
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message:
+              "Username or password is incorrect. A username is locked for 15 minutes after 5 failed attempts.",
+          });
+        }
+        await db.touchLastSignedIn(user.id);
+        ctx.res.cookie(COOKIE_NAME, await createSessionToken(user.id), {
+          ...getSessionCookieOptions(ctx.req),
+          maxAge: SESSION_MS,
+        });
+        return { success: true } as const;
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -39,8 +59,8 @@ export const appRouter = router({
 
   // ── Items ──────────────────────────────────────────────────────────────────
   items: router({
-    list: publicProcedure.query(() => db.listItems()),
-    get: publicProcedure.input(z.object({ id: z.number() })).query(({ input }) => db.getItemById(input.id)),
+    list: protectedProcedure.query(() => db.listItems()),
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => db.getItemById(input.id)),
     create: protectedProcedure
       .input(
         z.object({
@@ -74,7 +94,7 @@ export const appRouter = router({
 
   // ── Batches ────────────────────────────────────────────────────────────────
   batches: router({
-    list: publicProcedure
+    list: protectedProcedure
       .input(z.object({ itemId: z.number().optional() }).optional())
       .query(({ input }) => db.listBatches(input)),
     create: protectedProcedure
@@ -92,7 +112,7 @@ export const appRouter = router({
 
   // ── Stock transactions ─────────────────────────────────────────────────────
   transactions: router({
-    list: publicProcedure.query(() => db.listTransactions()),
+    list: protectedProcedure.query(() => db.listTransactions()),
 
     stockIn: protectedProcedure
       .input(
@@ -124,7 +144,7 @@ export const appRouter = router({
           lotNumber: input.lotNumber,
           expiryDate: input.expiryDate,
           notes: input.notes,
-          performedBy: ctx.user.name ?? ctx.user.email ?? "System",
+          performedBy: ctx.user.name ?? ctx.user.username,
         });
       }),
 
@@ -149,14 +169,14 @@ export const appRouter = router({
           lotNumber: null,
           expiryDate: null,
           notes: input.notes,
-          performedBy: ctx.user.name ?? ctx.user.email ?? "System",
+          performedBy: ctx.user.name ?? ctx.user.username,
         });
       }),
   }),
 
   // ── Stock dashboard (aggregated) ───────────────────────────────────────────
   stock: router({
-    totals: publicProcedure.query(async () => {
+    totals: protectedProcedure.query(async () => {
       const totals = await db.getStockTotals();
       const batchesAll = await db.listBatches();
       const today = new Date();
@@ -197,7 +217,7 @@ export const appRouter = router({
       });
     }),
 
-    itemBatches: publicProcedure.input(z.object({ itemId: z.number() })).query(async ({ input }) => {
+    itemBatches: protectedProcedure.input(z.object({ itemId: z.number() })).query(async ({ input }) => {
       return db.getBatchesByItem(input.itemId);
     }),
 
@@ -213,7 +233,7 @@ export const appRouter = router({
 
   // ── Consumption ────────────────────────────────────────────────────────────
   templates: router({
-    list: publicProcedure.query(() => db.listTemplates()),
+    list: protectedProcedure.query(() => db.listTemplates()),
     create: protectedProcedure
       .input(
         z.object({
@@ -228,9 +248,9 @@ export const appRouter = router({
   }),
 
   sessions: router({
-    list: publicProcedure.query(() => db.listSessions()),
-    listWithLines: publicProcedure.query(() => db.listSessionsWithLines()),
-    get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    list: protectedProcedure.query(() => db.listSessions()),
+    listWithLines: protectedProcedure.query(() => db.listSessionsWithLines()),
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
       const session = await db.getSessionById(input.id);
       if (!session) return undefined;
       const lines = await db.getSessionConsumables(session.id);
@@ -259,7 +279,7 @@ export const appRouter = router({
           shift: input.shift,
           sessionType: input.sessionType,
           sessionDate: input.sessionDate,
-          createdBy: ctx.user.name ?? ctx.user.email ?? "System",
+          createdBy: ctx.user.name ?? ctx.user.username,
         });
         // Deduct FEFO per line and record
         const recorded: { itemId: number; batchId: number | null; quantity: number }[] = [];
@@ -284,13 +304,15 @@ export const appRouter = router({
 
   // ── Reports ────────────────────────────────────────────────────────────────
   reports: router({
-    consumption: publicProcedure
+    consumption: protectedProcedure
       .input(z.object({ startDate: z.string(), endDate: z.string() }))
       .query(async ({ input }) => {
         const sessions = (await db.listSessions()).filter(
           (s) => s.sessionDate >= input.startDate && s.sessionDate <= input.endDate
         );
-        const allItems = await db.listItems();
+        // Include deleted (inactive) items: past consumption still has to be
+        // reported under its item, and a missing item crashes the page.
+        const allItems = await db.listItems(true);
         const itemMap = new Map(allItems.map((i) => [i.id, i]));
         // Fetch all lines for the matched sessions in a single query
         // (avoids one DB round-trip per session).

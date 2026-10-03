@@ -19,13 +19,101 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { trpc } from "@/lib/trpc";
 import { Activity, CalendarDays, FileText, HeartPulse, LayoutDashboard, LogOut, Package, PanelsTopLeft, PanelLeft, RotateCcw, ShoppingBag } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+
+const LOGO_SRC = "/spmc-skti-logo.jpg";
+
+function LoginScreen() {
+  const utils = trpc.useUtils();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const login = trpc.auth.login.useMutation({
+    onSuccess: () => utils.invalidate(),
+  });
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    login.mutate({ username, password });
+  };
+
+  return (
+    <main className="flex items-center justify-center min-h-screen p-5">
+      <form
+        onSubmit={handleSubmit}
+        className="glass-strong rounded-xl p-8 max-w-md w-full space-y-6 animate-in-rise"
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <img
+            src={LOGO_SRC}
+            alt="SPMC Kidney and Transplant Institute"
+            width={80}
+            height={80}
+            className="h-20 w-20 rounded-full object-cover border-2 border-primary/20 shadow-md"
+          />
+          <div>
+            <h1 className="text-3xl font-display font-semibold tracking-tight">
+              Dialysis Stock Tracker
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              SPMC Kidney and Transplant Institute
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="login-username">Username</Label>
+            <Input
+              id="login-username"
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              autoFocus
+              required
+              className="h-11"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="login-password">Password</Label>
+            <Input
+              id="login-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="h-11"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        </div>
+        {login.error && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {login.error.data?.code === "UNAUTHORIZED"
+              ? login.error.message
+              : "Sign-in is unavailable right now. Check the connection and try again."}
+          </p>
+        )}
+        <Button type="submit" size="lg" className="w-full h-11" disabled={login.isPending}>
+          {login.isPending ? "Signing in…" : "Sign in"}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center">
+          No account yet? Ask the unit administrator to create one.
+        </p>
+      </form>
+    </main>
+  );
+}
 
 export const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -64,27 +152,7 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
+    return <LoginScreen />;
   }
 
   return (
@@ -176,7 +244,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img
-                    src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                    src={LOGO_SRC}
                     alt="SPMC Kidney and Transplant Institute"
                     className="h-11 w-11 rounded-full object-cover border-2 border-white/25 shadow-md shrink-0"
                   />
@@ -186,7 +254,7 @@ function DashboardLayoutContent({
                 </div>
               ) : (
                 <img
-                  src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                  src={LOGO_SRC}
                   alt="SPMC SKTI"
                   className="h-11 w-11 rounded-full object-cover border-2 border-white/25 shadow-md shrink-0"
                 />
@@ -223,15 +291,15 @@ function DashboardLayoutContent({
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-9 w-9 border shrink-0">
                     <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
+                      {(user?.name || user?.username)?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                     <p className="text-sm font-medium truncate leading-none">
                       {user?.name || "-"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
+                    <p className="text-xs text-white/70 truncate mt-1.5">
+                      {user?.username || "-"}
                     </p>
                   </div>
                 </button>
@@ -264,7 +332,7 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-2.5">
               <SidebarTrigger className="h-11 w-11 rounded-lg glass" />
               <img
-                src="/manus-storage/spmc_skti_logo_c768c8ab.jpg"
+                src={LOGO_SRC}
                 alt="SPMC SKTI"
                 className="h-10 w-10 rounded-full object-cover border-2 border-primary/20 shrink-0"
               />

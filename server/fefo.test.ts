@@ -73,4 +73,34 @@ describe("deductFefo ordering (real DB)", () => {
     },
     30000
   );
+
+  it.skipIf(!TEST_DB)(
+    "leaves every batch untouched when asked for more than is on hand",
+    async () => {
+      const db = await getDb();
+      if (!db) return;
+
+      const [item] = await db
+        .insert(items)
+        .values({ name: "__fefo_short_test__", category: "saline", unitOfMeasure: "bag" })
+        .returning();
+      await db.insert(batches).values([
+        { itemId: item.id, lotNumber: "S-1", quantityReceived: 10, quantityOnHand: 10, expiryDate: "2027-01-01" },
+        { itemId: item.id, lotNumber: "S-2", quantityReceived: 6, quantityOnHand: 6, expiryDate: "2027-02-01" },
+      ]);
+
+      await expect(deductFefo(item.id, 17)).rejects.toThrow("Insufficient stock");
+
+      const remaining = await db.select().from(batches).where(eq(batches.itemId, item.id));
+      expect(Object.fromEntries(remaining.map((b) => [b.lotNumber, b.quantityOnHand]))).toEqual({
+        "S-1": 10,
+        "S-2": 6,
+      });
+
+      // Cleanup
+      await db.delete(batches).where(eq(batches.itemId, item.id));
+      await db.delete(items).where(eq(items.id, item.id));
+    },
+    30000
+  );
 });

@@ -1,110 +1,804 @@
 {
-  "version": "5",
-  "dialect": "mysql",
-  "id": "1fcfda40-b492-45bd-b316-60719c1400c6",
+  "id": "b5cccde3-a1ed-40da-b49d-e4d64520659d",
   "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "users": {
-      "name": "users",
+    "public.batches": {
+      "name": "batches",
+      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "batches_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lotNumber": {
+          "name": "lotNumber",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier": {
+          "name": "supplier",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantityReceived": {
+          "name": "quantityReceived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantityOnHand": {
+          "name": "quantityOnHand",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expiryDate": {
+          "name": "expiryDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isQuarantined": {
+          "name": "isQuarantined",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": true
+          "default": false
         },
-        "openId": {
-          "name": "openId",
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.consumption_templates": {
+      "name": "consumption_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "consumption_templates_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "sessionType": {
+          "name": "sessionType",
+          "type": "session_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "defaultQty": {
+          "name": "defaultQty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.items": {
+      "name": "items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "items_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "item_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unitOfMeasure": {
+          "name": "unitOfMeasure",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "minStockLevel": {
+          "name": "minStockLevel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "reorderLevel": {
+          "name": "reorderLevel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.purchase_order_lines": {
+      "name": "purchase_order_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "purchase_order_lines_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "poId": {
+          "name": "poId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantityOrdered": {
+          "name": "quantityOrdered",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantityReceived": {
+          "name": "quantityReceived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.purchase_orders": {
+      "name": "purchase_orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "purchase_orders_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "poNumber": {
+          "name": "poNumber",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier": {
+          "name": "supplier",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "purchase_order_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ordered'"
+        },
+        "expectedDeliveryDate": {
+          "name": "expectedDeliveryDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actualDeliveryDate": {
+          "name": "actualDeliveryDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "itemsSummary": {
+          "name": "itemsSummary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.session_consumables": {
+      "name": "session_consumables",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "session_consumables_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "sessionId": {
+          "name": "sessionId",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batchId": {
+          "name": "batchId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.stock_transactions": {
+      "name": "stock_transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "stock_transactions_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batchId": {
+          "name": "batchId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "transaction_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "transaction_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier": {
+          "name": "supplier",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lotNumber": {
+          "name": "lotNumber",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expiryDate": {
+          "name": "expiryDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "performedBy": {
+          "name": "performedBy",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "performedAt": {
+          "name": "performedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.treatment_sessions": {
+      "name": "treatment_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "treatment_sessions_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "patientName": {
+          "name": "patientName",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chair": {
+          "name": "chair",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shift": {
+          "name": "shift",
+          "type": "session_shift",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sessionType": {
+          "name": "sessionType",
+          "type": "session_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sessionDate": {
+          "name": "sessionDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "session_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'in-progress'"
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "users_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "username": {
+          "name": "username",
           "type": "varchar(64)",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+          "notNull": true
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "email": {
-          "name": "email",
-          "type": "varchar(320)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "loginMethod": {
-          "name": "loginMethod",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": false
         },
         "role": {
           "name": "role",
-          "type": "enum('user','admin')",
+          "type": "user_role",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
           "default": "'user'"
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
+          "default": "now()"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "onUpdate": true,
-          "default": "(now())"
+          "default": "now()"
         },
         "lastSignedIn": {
           "name": "lastSignedIn",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "users_id": {
-          "name": "users_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_openId_unique": {
-          "name": "users_openId_unique",
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "nullsNotDistinct": false,
           "columns": [
-            "openId"
+            "username"
           ]
         }
       },
-      "checkConstraint": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
     }
   },
+  "enums": {
+    "public.item_category": {
+      "name": "item_category",
+      "schema": "public",
+      "values": [
+        "dialyzer",
+        "bloodline",
+        "needles",
+        "saline",
+        "medications",
+        "disinfectants",
+        "PPE",
+        "PD supplies"
+      ]
+    },
+    "public.purchase_order_status": {
+      "name": "purchase_order_status",
+      "schema": "public",
+      "values": [
+        "ordered",
+        "partially-delivered",
+        "delivered",
+        "cancelled"
+      ]
+    },
+    "public.session_shift": {
+      "name": "session_shift",
+      "schema": "public",
+      "values": [
+        "morning",
+        "afternoon",
+        "evening"
+      ]
+    },
+    "public.session_status": {
+      "name": "session_status",
+      "schema": "public",
+      "values": [
+        "in-progress",
+        "completed"
+      ]
+    },
+    "public.session_type": {
+      "name": "session_type",
+      "schema": "public",
+      "values": [
+        "HD",
+        "PD"
+      ]
+    },
+    "public.transaction_reason": {
+      "name": "transaction_reason",
+      "schema": "public",
+      "values": [
+        "issued",
+        "adjusted",
+        "written off",
+        "returned"
+      ]
+    },
+    "public.transaction_type": {
+      "name": "transaction_type",
+      "schema": "public",
+      "values": [
+        "stock-in",
+        "stock-out"
+      ]
+    },
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "user",
+        "admin"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
   "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "tables": {},
-    "indexes": {}
+    "tables": {}
   }
 }
