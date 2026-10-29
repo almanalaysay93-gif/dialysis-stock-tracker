@@ -69,6 +69,7 @@ export const items = pgTable("items", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 160 }).notNull(),
   category: itemCategory("category").notNull(),
+  subcategory: varchar("subcategory", { length: 80 }),
   unitOfMeasure: varchar("unitOfMeasure", { length: 32 }).notNull(),
   minStockLevel: integer("minStockLevel").notNull().default(0),
   reorderLevel: integer("reorderLevel").notNull().default(0),

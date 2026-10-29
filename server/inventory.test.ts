@@ -175,6 +175,28 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("PD subcategories", () => {
+  const item = { name: "PD solution", category: "PD supplies" as const, unitOfMeasure: "box", minStockLevel: 0, reorderLevel: 10 };
+
+  it("preserves the selected solution on create and edit", async () => {
+    const caller = appRouter.createCaller(ctx());
+    await caller.items.create({ ...item, subcategory: "PD solution 2L/Box 2.3%" });
+    expect(mockCreateItem).toHaveBeenCalledWith(expect.objectContaining({ subcategory: "PD solution 2L/Box 2.3%" }));
+    await caller.items.update({ ...item, id: 1, subcategory: "Disinfection caps" });
+    expect(mockUpdateItem).toHaveBeenCalledWith(1, expect.objectContaining({ subcategory: "Disinfection caps" }));
+  });
+
+  it("clears PD classification when changing category", async () => {
+    await appRouter.createCaller(ctx()).items.update({ ...item, id: 1, category: "saline", subcategory: "Organizer" });
+    expect(mockUpdateItem).toHaveBeenCalledWith(1, expect.objectContaining({ subcategory: null }));
+  });
+
+  it("rejects unlisted subcategories before writing", async () => {
+    await expect(appRouter.createCaller(ctx()).items.create({ ...item, subcategory: "invalid" as never })).rejects.toThrow();
+    expect(mockCreateItem).not.toHaveBeenCalled();
+  });
+});
+
 describe("stock.totals", () => {
   it("computes low-stock and expiry alert flags", async () => {
     mockGetStockTotals.mockResolvedValueOnce([

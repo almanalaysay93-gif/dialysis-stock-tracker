@@ -16,6 +16,7 @@ export interface Item {
   id: number;
   name: string;
   category: Category;
+  subcategory?: string | null;
   unitOfMeasure: string;
   minStockLevel: number;
   reorderLevel: number;

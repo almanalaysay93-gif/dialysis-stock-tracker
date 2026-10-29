@@ -15,6 +15,13 @@
       "when": 1791001891197,
       "tag": "0001_outgoing_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793232919925,
+      "tag": "0002_cold_sally_floyd",
+      "breakpoints": true
     }
   ]
 }

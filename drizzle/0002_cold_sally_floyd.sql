@@ -1,0 +1,1 @@
+ALTER TABLE "items" ADD COLUMN "subcategory" varchar(80);

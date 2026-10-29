@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { PD_SUBCATEGORIES } from "@shared/pdSupplies";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -48,19 +49,21 @@ export const appRouter = router({
         z.object({
           name: z.string().min(1),
           category: categoryEnum,
+          subcategory: z.enum(PD_SUBCATEGORIES).nullish(),
           unitOfMeasure: z.string().min(1),
           minStockLevel: z.number().int().min(0),
           reorderLevel: z.number().int().min(0),
           description: z.string().optional(),
         })
       )
-      .mutation(({ input }) => db.createItem(input)),
+      .mutation(({ input }) => db.createItem({ ...input, subcategory: input.category === "PD supplies" ? input.subcategory : null })),
     update: protectedProcedure
       .input(
         z.object({
           id: z.number(),
           name: z.string().min(1),
           category: categoryEnum,
+          subcategory: z.enum(PD_SUBCATEGORIES).nullish(),
           unitOfMeasure: z.string().min(1),
           minStockLevel: z.number().int().min(0),
           reorderLevel: z.number().int().min(0),
@@ -69,7 +72,7 @@ export const appRouter = router({
       )
       .mutation(({ input }) => {
         const { id, ...rest } = input;
-        return db.updateItem(id, rest);
+        return db.updateItem(id, { ...rest, subcategory: rest.category === "PD supplies" ? rest.subcategory : null });
       }),
     delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => db.deleteItem(input.id)),
   }),

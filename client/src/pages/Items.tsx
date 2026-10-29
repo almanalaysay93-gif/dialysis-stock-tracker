@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { CATEGORY_META } from "@/lib/inventory";
+import { PD_SUBCATEGORIES, type PdSubcategory } from "@shared/pdSupplies";
 import type { Category, Item } from "@/lib/types";
 import { trpc } from "@/lib/trpc";
 import { MoreHorizontal, PackagePlus, Pencil, Trash2 } from "lucide-react";
@@ -53,6 +54,7 @@ const CATEGORIES = Object.keys(CATEGORY_META) as Category[];
 const EMPTY_FORM = {
   name: "",
   category: "dialyzer" as Category,
+  subcategory: null as PdSubcategory | null,
   unitOfMeasure: "",
   minStockLevel: 0,
   reorderLevel: 10,
@@ -66,13 +68,15 @@ export default function Items() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [filter, setFilter] = useState<string>("all");
+  const [pdFilter, setPdFilter] = useState("all");
 
   const { data: items, isLoading } = trpc.items.list.useQuery();
   const filtered = useMemo(() => {
     if (!items) return [];
     if (filter === "all") return items;
-    return items.filter((i) => i.category === filter);
-  }, [items, filter]);
+    return items.filter((i) => i.category === filter &&
+      (filter !== "PD supplies" || pdFilter === "all" || i.subcategory === pdFilter));
+  }, [items, filter, pdFilter]);
 
   const createMut = trpc.items.create.useMutation({
     onSuccess: () => {
@@ -111,6 +115,7 @@ export default function Items() {
     setForm({
       name: item.name,
       category: item.category,
+      subcategory: (item.subcategory as PdSubcategory) ?? null,
       unitOfMeasure: item.unitOfMeasure,
       minStockLevel: item.minStockLevel,
       reorderLevel: item.reorderLevel,
@@ -167,6 +172,19 @@ export default function Items() {
           </Button>
         ))}
       </div>
+
+      {filter === "PD supplies" && (
+        <div className="space-y-1.5 max-w-sm">
+          <Label htmlFor="pd-filter">PD subcategory</Label>
+          <Select value={pdFilter} onValueChange={setPdFilter}>
+            <SelectTrigger id="pd-filter"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All PD supplies</SelectItem>
+              {PD_SUBCATEGORIES.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -227,7 +245,7 @@ export default function Items() {
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <form onSubmit={submit}>
             <DialogHeader>
               <DialogTitle className="font-display">
@@ -251,7 +269,7 @@ export default function Items() {
                 <Label>Category</Label>
                 <Select
                   value={form.category}
-                  onValueChange={(v) => setForm({ ...form, category: v as Category })}
+                  onValueChange={(v) => setForm({ ...form, category: v as Category, subcategory: null })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -265,6 +283,19 @@ export default function Items() {
                   </SelectContent>
                 </Select>
               </div>
+              {form.category === "PD supplies" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="item-subcategory">PD subcategory</Label>
+                  <Select value={form.subcategory ?? "none"}
+                    onValueChange={value => setForm({ ...form, subcategory: value === "none" ? null : value as PdSubcategory })}>
+                    <SelectTrigger id="item-subcategory"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unspecified</SelectItem>
+                      {PD_SUBCATEGORIES.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="item-uom">Unit of measure</Label>
                 <Input
@@ -345,6 +376,7 @@ function ItemRow({
           <Badge variant="secondary" className="text-[11px] px-1.5 font-normal">
             {CATEGORY_META[item.category]?.label}
           </Badge>
+          {item.category === "PD supplies" && item.subcategory && <Badge variant="outline">{item.subcategory}</Badge>}
           <span>
             {item.unitOfMeasure} · min {item.minStockLevel} · reorder {item.reorderLevel}
           </span>
